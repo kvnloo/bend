@@ -2230,7 +2230,24 @@ function emit_intr(fl: File, it: Intr, x: HTerm,
     ty_adt(fl.book, m.all[0]) ?? die("an open Array element type");
     return arr_op(fl, op, lay_of(fl.book, m.all[0]), args);
   }
-  const ws = args.map((v) => (val_own(fl, v), val_word(v)));
+  // A C template reads each argument as a word (a u32 or a u64). An
+  // argument that arrived boxed — a polymorphic call's Term, say — is
+  // converted to its declared layout first; where the layout already
+  // matches, the conversion is a no-op.
+  const doms = m.tld?.$ === "Def"
+    ? tele_unbind(fl.book, m.tld.T).doms : [];
+  const lays: (Lay | null)[] = [];
+  for (let i = 0, j = 0; i < m.all.length && j < args.length; i++) {
+    if (i >= doms.length || quant_live(doms[i][0])) {
+      lays.push(i < doms.length ? lay_of(fl.book, doms[i][2]) : null);
+      j++;
+    }
+  }
+  const ws = args.map((v, j) => {
+    const u = val_to(fl, v, lays[j] ?? v.lay);
+    val_own(fl, u);
+    return val_word(u);
+  });
   if (Array.isArray(it.C)) {
     const as = ws.map((z) => emit_alias(fl, z, "a"));
     const vs: string[] = [];
