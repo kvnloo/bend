@@ -446,6 +446,20 @@ INLINE U32 f32_to_u32(U32 a) {
   return v >= 0.0f && v < 4294967296.0f ? (u32)v : 0;
 }
 
+// an F32 wait word as milliseconds, rounded up to match the JS lane. A
+// negative wait is already expired (wake at once); NaN and out-of-range
+// magnitudes are garbage, so fail loudly like the JS lane does.
+// (err_fail is defined below; this forward declaration covers the one
+// caller, io_step, which already links err_fail.)
+static void err_fail(const char* msg);
+INLINE u64 f32_wait_ms(U32 a) {
+  f32 v = f32_unbox(a);
+  if (v < 0.0f) return 0;
+  if (!(v < 4294967296.0f))
+    err_fail("a foreign effect waited on time with a non-numeric duration");
+  return (u64)ceil(v);
+}
+
 INLINE Nat nat_chk(Env e, Nat n) {
   if (n > NAT_IMM) {
     err_post(e.mem, ERR_NATS);
@@ -5341,6 +5355,7 @@ OUTLINE Term corpus_eval(Corpus H, Term t) {
 
 #define IO_READ 1
 #define IO_TIME 2
+#define IO_F32  4
 #define IO_PARK TERM_HOLE
 
 // A handle is its host value, a descriptor or a pointer, packed in one
@@ -5892,11 +5907,29 @@ static int io_step(Env e, IoAct* a) {
       err_fail("an alien request");
     }
     u32 need = io_eff_rows[c].ask;
+    if (need != 0) {
+      // A wait need reads its word (a duration, an fd) from the request's
+      // first argument. A zero-argument effect leaves the continuation in
+      // the word's slot; a mistyped argument leaves garbage: either would
+      // park the loop on a nonsense wait forever, so fail loudly instead.
+      // (An F32 time word is validated by value in f32_wait_ms below.)
+      Term wt = e.mem[at];
+      if (cid_arity(c) < 2
+          || ((need & IO_READ) && term_tag(wt) != TAG_PAK)
+          || ((need & IO_TIME) && !(need & (IO_READ | IO_F32)) && term_tag(wt) != 0)) {
+        err_fail((need & IO_READ)
+          ? "a foreign effect waited on read with a non-handle first argument"
+          : "a foreign effect waited on time with a non-numeric duration");
+      }
+    }
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
+      // a U32 and an F32 share the tag-0 layout; an F32 wait word must be
+      // converted by value, not read as raw bits
+      u64 ms = need & IO_F32 ? f32_wait_ms(word) : (u64)word;
       io_wait_on(&a->work, (int)word, need & IO_READ ? POLLIN : 0,
-        need & IO_TIME ? io_tick() + (u64)word * 1000000ull : 0, io_exec);
+        need & IO_TIME ? io_tick() + ms * 1000000ull : 0, io_exec);
       return -1;
     }
     Term x = io_exec(e, &a->work);
@@ -6315,7 +6348,7 @@ function io_sys() {
       Object.fromEntries(("socket:iii>i bind:ipu>i listen:ii>i connect:ipu>i"
         + " accept:ipp>i send:ipUi>I recv:ipUi>I read:ipU>I pread:ipUI>I"
         + " sendto:ipUipu>I"
-        + " recvfrom:ipUipp>I close:i>i poll:pui>i setsockopt:iiipu>i"
+        + " recvfrom:ipUipp>I close:i>i shutdown:ii>i poll:pui>i setsockopt:iiipu>i"
         + (vari ? " fcntl:iiiiiiiii>i" : " fcntl:iii>i") + " getsockopt:iiipp>i"
         + " strerror:i>c " + err + ":>p").split(" ").map((s) => {
         const [name, args, ret] = s.split(/[:>]/);
@@ -6437,9 +6470,37 @@ function io_run(m) {
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
-          io.waits.push(fd === null
-            ? { at: performance.now() + Number(op.args[0]), k: op.kont, more }
-            : { fd: fd, k: op.kont, more });
+          const wait = { k: op.kont, more: more };
+          if (fd !== null) {
+            // A read wait parks on a handle (a descriptor number); a twin
+            // that declares {read: true} with a non-numeric first argument
+            // would otherwise park on a bogus fd. Fail loudly instead.
+            const fdn = Number(fd);
+            if (!Number.isInteger(fdn) || fdn < 0) {
+              io_errs("bend: a foreign effect waited on read with a non-handle first argument");
+              return 1;
+            }
+            wait.fd = fdn;
+          }
+          // A combined {time, read} need arms both the fd and the deadline
+          // and fires on whichever comes first. The C lane's io_wait does
+          // the same (io_step arms fd + io_tick() + word*1ms), and io_wait
+          // here already polls both sides of an fd+at entry. The deadline
+          // shares the need's word with the fd, like the C lane.
+          if (need.time) {
+            // A time wait's deadline comes from the first argument; a
+            // non-finite one (a zero-argument foreign def, a mistyped or
+            // infinite duration) would park the task forever, so fail
+            // loudly instead. A finite negative duration is already
+            // expired and wakes at once.
+            const ms = Number(op.args[0]);
+            if (!Number.isFinite(ms)) {
+              io_errs("bend: a foreign effect waited on time with a non-numeric duration");
+              return 1;
+            }
+            wait.at = performance.now() + ms;
+          }
+          io.waits.push(wait);
           break;
         }
         const x = op.run(...op.args, op.kont);

@@ -81,6 +81,45 @@ loop calls `more()` when `fd` is ready; `more` answers the value, or
 `undefined` to park again. `io_sys()` is `libc` through `bun:ffi`
 (`read`, `recv`, `poll`, `errno`); `tcp_recv.js` shows the full shape.
 
+## Wait guards
+
+A wait need reads its word from the call's first argument: `IO_READ` parks
+on the handle in `f[0]` (a descriptor number in JS, a packed handle in C),
+`IO_TIME` parks for `f[0]` milliseconds. A garbage word used to park the
+loop forever with no output; the runtime now fails loudly instead.
+
+In JS, a read wait needs a non-negative integer descriptor; a time wait
+needs a finite duration. A finite negative duration is already expired and
+wakes at once. In C, a read wait needs a packed handle (`TAG_PAK`), a
+non-`F32` time wait needs a tag-0 word, and an `F32` time wait
+(`IO_TIME|IO_F32`) is validated by value: negative wakes at once, NaN and
+out-of-range magnitudes fail loudly. A zero-argument foreign def that
+declares a wait need fails loudly in both lanes: there is no first
+argument to read the word from.
+
+A combined `{read: true, time: true}` need arms both sides of one wait and
+fires on whichever comes first. The deadline shares the need's word with
+the descriptor, like the C lane.
+
+## Socket notes
+
+`TCP.recv` answers `""` for an orderly peer close: a `recv` that returns 0
+packs a zero-length string (`tcp_recv.c`, `tcp_recv.js`). Read again after
+it and you get `""` again at once, so a drain loop must count bytes or
+fuel, not wait for data after the close.
+
+There is no `IO_WRITE` need bit; the needs are `0`, `IO_READ`, and
+`IO_TIME`. An effect that waits on writability registers `ask=0` and parks
+manually: `tcp_send.c` calls `io_wait_on(w, fd, POLLOUT, 0, tcp_send_more)`
+when `send` answers `EAGAIN`, and `tcp_send.js` has no `tcp_send_need`,
+parking with `io_park_on(fd, true, k, ...)` (`true` is writability).
+
+A combined read+time wait does the same. `TCP.poll` registers `ask=0` and
+parks manually with a deadline,
+`io_wait_on(w, fd, POLLIN, at, tcp_poll_more)` (`at` from `io_wait_time(w)`;
+no `tcp_poll_need` in JS). A wake that finds data answers `Some{data}`; one
+that finds nothing re-parks until the deadline, then answers `None{}`.
+
 ## A complete example
 
 `main.bend`:
