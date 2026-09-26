@@ -81,6 +81,25 @@ loop calls `more()` when `fd` is ready; `more` answers the value, or
 `undefined` to park again. `io_sys()` is `libc` through `bun:ffi`
 (`read`, `recv`, `poll`, `errno`); `tcp_recv.js` shows the full shape.
 
+## Socket notes
+
+`TCP.recv` answers `""` for an orderly peer close: a `recv` that returns 0
+packs a zero-length string (`tcp_recv.c`, `tcp_recv.js`). Read again after
+it and you get `""` again at once, so a drain loop must count bytes or
+fuel, not wait for data after the close.
+
+There is no `IO_WRITE` need bit; the needs are `0`, `IO_READ`, and
+`IO_TIME`. An effect that waits on writability registers `ask=0` and parks
+manually: `tcp_send.c` calls `io_wait_on(w, fd, POLLOUT, 0, tcp_send_more)`
+when `send` answers `EAGAIN`, and `tcp_send.js` has no `tcp_send_need`,
+parking with `io_park_on(fd, true, k, ...)` (`true` is writability).
+
+A combined read+time wait does the same. `TCP.poll` registers `ask=0` and
+parks manually with a deadline,
+`io_wait_on(w, fd, POLLIN, at, tcp_poll_more)` (`at` from `io_wait_time(w)`;
+no `tcp_poll_need` in JS). A wake that finds data answers `Some{data}`; one
+that finds nothing re-parks until the deadline, then answers `None{}`.
+
 ## A complete example
 
 `main.bend`:
