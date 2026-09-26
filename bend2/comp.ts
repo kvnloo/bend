@@ -5892,6 +5892,16 @@ static int io_step(Env e, IoAct* a) {
       err_fail("an alien request");
     }
     u32 need = io_eff_rows[c].ask;
+    if (need & IO_TIME) {
+      // A time wait's word is a millisecond count in a number term. A
+      // zero-argument effect leaves the continuation in the word's slot,
+      // and a mistyped argument leaves garbage: either would park the
+      // loop on a nonsense deadline forever, so fail loudly instead.
+      Term wt = e.mem[at];
+      if (cid_arity(c) < 2 || term_tag(wt) != 0) {
+        err_fail("a foreign effect waited on time with a non-numeric duration");
+      }
+    }
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
@@ -6437,9 +6447,19 @@ function io_run(m) {
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
-          io.waits.push(fd === null
-            ? { at: performance.now() + Number(op.args[0]), k: op.kont, more }
-            : { fd: fd, k: op.kont, more });
+          if (need.time) {
+            // A time wait's first argument is a millisecond count. Anything
+            // else (a missing argument is undefined, a mistyped one is NaN)
+            // would park on a NaN deadline forever, so fail loudly instead.
+            const ms = Number(op.args[0]);
+            if (!(ms >= 0)) {
+              io_errs("bend: a foreign effect waited on time with a non-numeric duration");
+              return 1;
+            }
+            io.waits.push({ at: performance.now() + ms, k: op.kont, more });
+          } else {
+            io.waits.push({ fd: fd, k: op.kont, more });
+          }
           break;
         }
         const x = op.run(...op.args, op.kont);
