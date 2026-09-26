@@ -2230,7 +2230,24 @@ function emit_intr(fl: File, it: Intr, x: HTerm,
     ty_adt(fl.book, m.all[0]) ?? die("an open Array element type");
     return arr_op(fl, op, lay_of(fl.book, m.all[0]), args);
   }
-  const ws = args.map((v) => (val_own(fl, v), val_word(v)));
+  // A C template reads each argument as a word (a u32 or a u64). An
+  // argument that arrived boxed — a polymorphic call's Term, say — is
+  // converted to its declared layout first; where the layout already
+  // matches, the conversion is a no-op.
+  const doms = m.tld?.$ === "Def"
+    ? tele_unbind(fl.book, m.tld.T).doms : [];
+  const lays: (Lay | null)[] = [];
+  for (let i = 0, j = 0; i < m.all.length && j < args.length; i++) {
+    if (i >= doms.length || quant_live(doms[i][0])) {
+      lays.push(i < doms.length ? lay_of(fl.book, doms[i][2]) : null);
+      j++;
+    }
+  }
+  const ws = args.map((v, j) => {
+    const u = val_to(fl, v, lays[j] ?? v.lay);
+    val_own(fl, u);
+    return val_word(u);
+  });
   if (Array.isArray(it.C)) {
     const as = ws.map((z) => emit_alias(fl, z, "a"));
     const vs: string[] = [];
@@ -5892,6 +5909,12 @@ static int io_step(Env e, IoAct* a) {
       err_fail("an alien request");
     }
     u32 need = io_eff_rows[c].ask;
+    // A read wait parks on the handle in f[0]; a twin that declares
+    // IO_READ with a non-handle first argument would otherwise wait on
+    // the term bits decoded as a descriptor. Fail loudly instead.
+    if ((need & IO_READ) && term_tag(e.mem[at]) != TAG_PAK) {
+      err_fail("a foreign effect waited on read with a non-handle first argument");
+    }
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
@@ -6435,6 +6458,15 @@ function io_run(m) {
         }
         const need = op.need?.() ?? {};
         const fd = need.read ? op.args[0] : null;
+        // A read wait parks on a handle (a descriptor number); a twin
+        // that declares {read: true} with a non-number first argument
+        // would otherwise park on a bogus fd. Fail loudly instead.
+        // (A U32 first argument is still indistinguishable from a
+        // descriptor here; only the C lane guards that case.)
+        if (need.read && typeof fd !== "number") {
+          io_errs("bend: a foreign effect waited on read with a non-handle first argument");
+          return 1;
+        }
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
           io.waits.push(fd === null

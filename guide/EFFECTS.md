@@ -34,9 +34,11 @@ static void __attribute__((constructor)) clock_now_use(void) {
 ```
 
 `CID_X` is the def's name uppercased, dots to underscores. `f` holds the
-def's arguments in order: a `U32` is the word (`(u32)f[0]`), a `String` is
-taken with `io_cstr(e, f[0], &len)` (a `malloc`ed copy you free), a handle
-with `io_hand_v(f[0])`. The last argument of `io_eff` is the need: `0` runs
+def's arguments in order: a `U32` is the word (`(u32)f[0]`), an `F32`
+arrives as its raw bits -- decode the value with `f32_unbox((u64)f[0])`,
+never read the bits as a count -- a `String` is taken with
+`io_cstr(e, f[0], &len)` (a `malloc`ed copy you free), a handle with
+`io_hand_v(f[0])`. The last argument of `io_eff` is the need: `0` runs
 the effect at once; `IO_READ` parks it until the handle in `f[0]` is
 readable; `IO_TIME` parks it for `f[0]` milliseconds. Then the loop calls
 the effect.
