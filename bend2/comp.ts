@@ -446,10 +446,18 @@ INLINE U32 f32_to_u32(U32 a) {
   return v >= 0.0f && v < 4294967296.0f ? (u32)v : 0;
 }
 
-// an F32 wait word as milliseconds, rounded up to match the JS lane
+// an F32 wait word as milliseconds, rounded up to match the JS lane. A
+// negative wait is already expired (wake at once); NaN and out-of-range
+// magnitudes are garbage, so fail loudly like the JS lane does.
+// (err_fail is defined below; this forward declaration covers the one
+// caller, io_step, which already links err_fail.)
+static void err_fail(const char* msg);
 INLINE u64 f32_wait_ms(U32 a) {
   f32 v = f32_unbox(a);
-  return v >= 0.0f && v < 4294967296.0f ? (u64)ceil(v) : 0;
+  if (v < 0.0f) return 0;
+  if (!(v < 4294967296.0f))
+    err_fail("a foreign effect waited on time with a non-numeric duration");
+  return (u64)ceil(v);
 }
 
 INLINE Nat nat_chk(Env e, Nat n) {
