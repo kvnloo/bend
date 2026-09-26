@@ -446,6 +446,12 @@ INLINE U32 f32_to_u32(U32 a) {
   return v >= 0.0f && v < 4294967296.0f ? (u32)v : 0;
 }
 
+// an F32 wait word as milliseconds, rounded up to match the JS lane
+INLINE u64 f32_wait_ms(U32 a) {
+  f32 v = f32_unbox(a);
+  return v >= 0.0f && v < 4294967296.0f ? (u64)ceil(v) : 0;
+}
+
 INLINE Nat nat_chk(Env e, Nat n) {
   if (n > NAT_IMM) {
     err_post(e.mem, ERR_NATS);
@@ -5341,6 +5347,7 @@ OUTLINE Term corpus_eval(Corpus H, Term t) {
 
 #define IO_READ 1
 #define IO_TIME 2
+#define IO_F32  4
 #define IO_PARK TERM_HOLE
 
 // A handle is its host value, a descriptor or a pointer, packed in one
@@ -5895,8 +5902,11 @@ static int io_step(Env e, IoAct* a) {
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
+      // a U32 and an F32 share the tag-0 layout; an F32 wait word must be
+      // converted by value, not read as raw bits
+      u64 ms = need & IO_F32 ? f32_wait_ms(word) : (u64)word;
       io_wait_on(&a->work, (int)word, need & IO_READ ? POLLIN : 0,
-        need & IO_TIME ? io_tick() + (u64)word * 1000000ull : 0, io_exec);
+        need & IO_TIME ? io_tick() + ms * 1000000ull : 0, io_exec);
       return -1;
     }
     Term x = io_exec(e, &a->work);

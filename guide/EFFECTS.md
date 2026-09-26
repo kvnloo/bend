@@ -38,7 +38,11 @@ def's arguments in order: a `U32` is the word (`(u32)f[0]`), a `String` is
 taken with `io_cstr(e, f[0], &len)` (a `malloc`ed copy you free), a handle
 with `io_hand_v(f[0])`. The last argument of `io_eff` is the need: `0` runs
 the effect at once; `IO_READ` parks it until the handle in `f[0]` is
-readable; `IO_TIME` parks it for `f[0]` milliseconds. Then the loop calls
+readable; `IO_TIME` parks it for `f[0]` milliseconds. `U32` and `F32` share
+the tag-0 layout, so a wait word declared `F32` in Bend must also set
+`IO_F32` (`IO_TIME | IO_F32`); the runtime then converts the float value to
+whole milliseconds (rounded up, like the JS lane) instead of reading the
+term's raw bits as a count. Then the loop calls
 the effect.
 
 The effect returns a Term: a `U32` is `(Term)n`, `Unit` is
