@@ -5892,6 +5892,13 @@ static int io_step(Env e, IoAct* a) {
       err_fail("an alien request");
     }
     u32 need = io_eff_rows[c].ask;
+    // A wait reads its word from the request's first field: a handle for
+    // IO_READ, a millisecond deadline for IO_TIME. A need declaring both
+    // would silently wake the C lane after (fd number) milliseconds while
+    // the JS lane parks on the handle forever, so fail loudly instead.
+    if ((need & (IO_READ | IO_TIME)) == (IO_READ | IO_TIME)) {
+      err_fail("a foreign effect cannot wait on both a handle and a deadline");
+    }
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
@@ -6434,6 +6441,13 @@ function io_run(m) {
           return op.code;
         }
         const need = op.need?.() ?? {};
+        // A combined read+time need has no defined wait: the C lane would
+        // wake after (fd number) milliseconds while this lane parks on the
+        // handle forever, so fail loudly instead of diverging silently.
+        if (need.read && need.time) {
+          io_errs("bend: a foreign effect cannot wait on both a handle and a deadline");
+          return 1;
+        }
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
