@@ -304,13 +304,24 @@ async function cli_checkup(file: string): Promise<void> {
     }
     const rel = imp[0];
     cli_say(1, "--- " + rel + " ---\n");
-    const at = /^0x[0-9a-f]+\//.test(rel)
+    const isHub = /^0x[0-9a-f]+\//.test(rel);
+    const at = isHub
       ? path.join(BEND_LIB, rel)
       : path.join(path.dirname(file), rel);
     let code = 1;
     try {
-      const own = fs.readFileSync(at, "utf8").split("\n")
-        .some((l) => { const p = import_line(l); return p !== null && p[0] === "Base"; });
+      let own = false;
+      try {
+        own = fs.readFileSync(at, "utf8").split("\n")
+          .some((l) => { const p = import_line(l); return p !== null && p[0] === "Base"; });
+      } catch (e) {
+        if (!isHub) {
+          throw e;
+        }
+        // A hub import whose package is not cached yet: the loader fetches it
+        // from the hub on demand, so let book_read do that instead of failing
+        // here the way a plain `bend` run would not.
+      }
       code = book_run(...await book_read(at, own ? base : undefined), []);
     } catch (e) {
       cli_say(2, book_err(e) + "\n");
