@@ -6437,9 +6437,27 @@ function io_run(m) {
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
-          io.waits.push(fd === null
-            ? { at: performance.now() + Number(op.args[0]), k: op.kont, more }
-            : { fd: fd, k: op.kont, more });
+          if (fd === null) {
+            // A time wait's deadline comes from the first argument; a
+            // non-numeric one (a zero-argument foreign def, say) would park
+            // the task forever on a NaN deadline, so fail loudly instead.
+            const ms = Number(op.args[0]);
+            if (!Number.isFinite(ms)) {
+              io_errs("bend: a foreign effect waited on time with a non-numeric duration");
+              return 1;
+            }
+            io.waits.push({ at: performance.now() + ms, k: op.kont, more });
+          } else {
+            // A read wait's file descriptor comes from the first argument; a
+            // non-numeric one (a zero-argument foreign def, say) would park
+            // the task forever on a bogus wait, so fail loudly instead.
+            const fdn = Number(fd);
+            if (!Number.isInteger(fdn) || fdn < 0) {
+              io_errs("bend: a foreign effect waited on read with a non-numeric file descriptor");
+              return 1;
+            }
+            io.waits.push({ fd: fdn, k: op.kont, more });
+          }
           break;
         }
         const x = op.run(...op.args, op.kont);
