@@ -284,7 +284,22 @@ async function cli_checkup(file: string): Promise<void> {
   let bad = false;
   for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
     const imp = import_line(raw);
-    if (imp === null || imp[0] === "Base") {
+    if (imp === null) {
+      // The loader rejects a line that opens like an import but fails its
+      // grammar; checkup must fail it too instead of silently skipping it.
+      if (/^import(\s.*|)$/.test(raw.trim())) {
+        cli_say(2, "Error:\n- expected : an import ('import Base', or 'import <path> as <Name>')\n- observed : '" + raw.trim() + "'\n");
+        bad = true;
+      }
+      continue;
+    }
+    if (imp[0] === "Base") {
+      // `import Base as <Name>` is a loader error ("an import of a .bend
+      // file"); do not silently skip it.
+      if (imp[1] !== "") {
+        cli_say(2, "Error:\n- expected : an import of a .bend file\n- observed : 'Base'\n");
+        bad = true;
+      }
       continue;
     }
     const rel = imp[0];
