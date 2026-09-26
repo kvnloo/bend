@@ -6437,9 +6437,19 @@ function io_run(m) {
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
-          io.waits.push(fd === null
-            ? { at: performance.now() + Number(op.args[0]), k: op.kont, more }
-            : { fd: fd, k: op.kont, more });
+          const wait = { k: op.kont, more: more };
+          if (fd !== null) {
+            wait.fd = fd;
+          }
+          // A combined {time, read} need arms both the fd and the deadline
+          // and fires on whichever comes first. The C lane's io_wait does
+          // the same (io_step arms fd + io_tick() + word*1ms), and io_wait
+          // here already polls both sides of an fd+at entry. The deadline
+          // shares the need's word with the fd, like the C lane.
+          if (need.time) {
+            wait.at = performance.now() + Number(op.args[0]);
+          }
+          io.waits.push(wait);
           break;
         }
         const x = op.run(...op.args, op.kont);
