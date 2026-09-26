@@ -6448,11 +6448,13 @@ function io_run(m) {
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
           if (need.time) {
-            // A time wait's first argument is a millisecond count. Anything
-            // else (a missing argument is undefined, a mistyped one is NaN)
-            // would park on a NaN deadline forever, so fail loudly instead.
+            // A time wait's first argument is a millisecond count. A
+            // non-finite duration (a missing argument is undefined, a
+            // mistyped one is NaN, and an infinite one would park
+            // forever) is garbage, so fail loudly instead; a finite
+            // negative duration is already expired and wakes at once.
             const ms = Number(op.args[0]);
-            if (!(ms >= 0)) {
+            if (!Number.isFinite(ms)) {
               io_errs("bend: a foreign effect waited on time with a non-numeric duration");
               return 1;
             }
