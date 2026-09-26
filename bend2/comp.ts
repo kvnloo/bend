@@ -6442,15 +6442,21 @@ function io_run(m) {
           return op.code;
         }
         const need = op.need?.() ?? {};
-        const fd = need.read ? op.args[0] : null;
+        let fd = need.read ? op.args[0] : null;
         // A read wait parks on a handle (a descriptor number); a twin
-        // that declares {read: true} with a non-number first argument
-        // would otherwise park on a bogus fd. Fail loudly instead.
+        // that declares {read: true} with a non-handle first argument
+        // would otherwise park on a bogus fd. Fail loudly instead, and
+        // normalize the descriptor the same way the fd guard does: a
+        // fractional or negative descriptor is garbage too.
         // (A U32 first argument is still indistinguishable from a
         // descriptor here; only the C lane guards that case.)
-        if (need.read && typeof fd !== "number") {
-          io_errs("bend: a foreign effect waited on read with a non-handle first argument");
-          return 1;
+        if (need.read) {
+          const fdn = Number(fd);
+          if (!Number.isInteger(fdn) || fdn < 0) {
+            io_errs("bend: a foreign effect waited on read with a non-handle first argument");
+            return 1;
+          }
+          fd = fdn;
         }
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
