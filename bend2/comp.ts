@@ -1150,6 +1150,27 @@ function sig_def(cb: Carb, k: Bend.Name): Sig {
       return { live: [], lays: [BOX, BOX], ret: BOX };
     }
     const doms = tele_unbind(cb.book, tld.T).doms;
+    if (def_foreign(tld)) {
+      // A foreign def takes its arity from its own parameter list, exactly
+      // like a local one: it must bind every user binder of its law. The
+      // count below peels Alls without unfolding the IO effect, the same
+      // way book_valid validates the law; tele_unbind above unfolds IO's
+      // own -R/k binders, so doms.length cannot be compared to tld.n.
+      // Without this, slice(0, n) grabs the wrong domains for a law with
+      // leading `for` binders the def does not bind, and the value
+      // argument lands in the continuation slot: a runtime crash on a
+      // program that checked. Local defs fail this shape in def_check;
+      // foreign defs have no body to check, so fail loudly here instead.
+      let tel = Bend.term_strip(tld.T);
+      let d = 0;
+      for (; tel.$ === "All"; d++) {
+        tel = Bend.term_strip(tel.B(Bend.Var(tel.k, d)));
+      }
+      if (d !== tld.n) {
+        die("a foreign def binding " + String(tld.n) + " parameters for a law with "
+          + String(d) + ": " + k);
+      }
+    }
     const live = doms.slice(0, tld.n).filter(live_dom);
     const lays = live.map(([, , A]) => lay_of(cb.book, A));
     if (def_foreign(tld)) {
