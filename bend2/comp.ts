@@ -5892,6 +5892,15 @@ static int io_step(Env e, IoAct* a) {
       err_fail("an alien request");
     }
     u32 need = io_eff_rows[c].ask;
+    if (need != 0 && cid_arity(c) < 2) {
+      // A wait need reads its word (a duration, an fd) from the request's
+      // first argument; a request with no arguments has no such word (its
+      // first slot holds the continuation), so fail loudly instead of
+      // waiting on garbage.
+      err_fail(need & IO_TIME
+        ? "a foreign effect waited on time with a non-numeric duration"
+        : "a foreign effect waited on a read with no fd argument");
+    }
     u32 word = (u32)(need & IO_READ ? io_hand_v(e.mem[at]) : e.mem[at]);
     a->cont  = req;
     if (need != 0) {
@@ -6437,9 +6446,19 @@ function io_run(m) {
         const fd = need.read ? op.args[0] : null;
         if (need.time || fd !== null) {
           const more = () => op.run(...op.args, op.kont);
-          io.waits.push(fd === null
-            ? { at: performance.now() + Number(op.args[0]), k: op.kont, more }
-            : { fd: fd, k: op.kont, more });
+          if (fd === null) {
+            // A time wait's deadline comes from the first argument; a
+            // non-numeric one (a zero-argument foreign def, say) would park
+            // the task forever on a NaN deadline, so fail loudly instead.
+            const ms = Number(op.args[0]);
+            if (!Number.isFinite(ms)) {
+              io_errs("bend: a foreign effect waited on time with a non-numeric duration");
+              return 1;
+            }
+            io.waits.push({ at: performance.now() + ms, k: op.kont, more });
+          } else {
+            io.waits.push({ fd: fd, k: op.kont, more });
+          }
           break;
         }
         const x = op.run(...op.args, op.kont);
