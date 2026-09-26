@@ -37,6 +37,7 @@ usage:
   bend <file.bend> [args]       check the file, then run main with args
   bend <file.bend> -o <out>     build a binary; <out>.c emits C, <out>.js JS
   bend <file.bend> --check-only check the file and its imports; run nothing
+  bend <file.bend> --checkup    check and run each import of the file alone
   bend <file.bend> --publish    publish the file and its imports to the hub
   bend <page.html> -o <dir>     bundle a page that imports .bend files
   bend base [--types|<name>]    print Base, its types, or a name and subnames
@@ -256,22 +257,45 @@ async function cli_file(args: string[]): Promise<void> {
   }
 }
 
+// import_line reads one source line the way the loader does (bend.ts
+// book_load): 'import Base', or 'import <path> as <Name>', each with an
+// optional trailing comment. cli_checkup needs the loader's reading: its
+// old pattern required end-of-line right after the alias, so an import
+// with a trailing comment was silently skipped and never checked.
+function import_line(line: string): [string, string] | null {
+  const m = /^import\s+(\S+)(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?\s*(?:#.*)?$/
+    .exec(line.trim());
+  if (m === null || (m[2] === undefined && m[1] !== "Base")) {
+    return null;
+  }
+  return [m[1], m[2] ?? ""];
+}
+
+// BEND_LIB is where hub packages live (same resolution as bend.ts
+// book_load: $BEND_LIB, else ~/.bend/lib); a 0x<hash>/ import in checkup
+// resolves there instead of beside the file.
+const BEND_LIB =
+  path.resolve(process.env.BEND_LIB ?? path.join(os.homedir(), ".bend", "lib"));
+
 // cli_checkup checks and runs each import of the file alone (Base read
 // once, seeded into every module that imports it); one that fails fails it.
 async function cli_checkup(file: string): Promise<void> {
   const [base] = await book_read(BASE);
   let bad = false;
   for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
-    const m = /^import\s+(\S+)\s+as\s+[A-Za-z_][A-Za-z0-9_]*\s*$/
-      .exec(raw.trim());
-    if (m === null) {
+    const imp = import_line(raw);
+    if (imp === null || imp[0] === "Base") {
       continue;
     }
-    const at = path.join(path.dirname(file), m[1]);
-    cli_say(1, "--- " + m[1] + " ---\n");
+    const rel = imp[0];
+    cli_say(1, "--- " + rel + " ---\n");
+    const at = /^0x[0-9a-f]+\//.test(rel)
+      ? path.join(BEND_LIB, rel)
+      : path.join(path.dirname(file), rel);
     let code = 1;
     try {
-      const own = /^import Base$/m.test(fs.readFileSync(at, "utf8"));
+      const own = fs.readFileSync(at, "utf8").split("\n")
+        .some((l) => { const p = import_line(l); return p !== null && p[0] === "Base"; });
       code = book_run(...await book_read(at, own ? base : undefined), []);
     } catch (e) {
       cli_say(2, book_err(e) + "\n");
