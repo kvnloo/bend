@@ -1306,9 +1306,42 @@ function show_main(book: Bend.Book): Show | null {
 
 export function io_run(book: Bend.Book, args: string[] = []): number {
   const src = js_lib(book, ["main"], null) + "\n" + RUNTIME_MAIN
-    + "\ncli_args = " + JSON.stringify(args) + ";\nreturn io_run("
+    + "\ncli_args = " + JSON.stringify(cli_strip_args(args)) + ";\nreturn io_run("
     + js_sat("main") + ");";
   return new Function("require", src)(import.meta.require) as number;
+}
+
+// The emitted binaries' cli() keeps the runtime's own flags (--threads,
+// --gpu) out of IO.args; the in-process run path must strip them too, or
+// the same program answers different IO.args on different lanes. Mirrors
+// cli() in RUNTIME_MAIN, minus --help (the compiler owns help in-process).
+// A mistyped flag value fails loud, exactly like the emitted binaries.
+function cli_strip_args(argv: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i];
+    if (a === "--") {
+      out.push(...argv.slice(i + 1));
+      break;
+    } else if (a === "--threads" || a === "--gpu") {
+      const v = argv[i + 1];
+      const ok = a === "--threads"
+        ? v !== undefined && /^[+-]?[0-9]+$/.test(v) && parseInt(v, 10) >= 1
+        : v === "on" || v === "off"
+          || (v !== undefined && /^[0-9]*\.?[0-9]+(GB|MB)$/.test(v)
+            && parseFloat(v) > 0);
+      if (!ok) {
+        throw "bend: expected "
+          + (a === "--threads"
+            ? "a thread count of 1 or more after --threads"
+            : "on, off or a size like 4GB after --gpu");
+      }
+      i += 1;
+    } else {
+      out.push(a);
+    }
+  }
+  return out;
 }
 
 // Anf
