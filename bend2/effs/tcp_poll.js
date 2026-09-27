@@ -8,10 +8,11 @@
 function tcp_poll(socket, max, ms, k) {
   const sys = io_sys();
   const fd = socket;
-  const b = new Uint8Array(Math.max(Number(max), 1));
+  const len = Math.min(Number(max), 2147483647);
+  const b = new Uint8Array(Math.max(len, 1));
   const at = performance.now() + Number(ms);
   const go = () => {
-    const n = Number(sys.recv(fd, sys.ptr(b), Number(max), 0));
+    const n = Number(sys.recv(fd, sys.ptr(b), len, 0));
     if (n >= 0) {
       return io_tup(socket, io_done({ $: "Some", value: io_text(b, n) }));
     }

@@ -4,11 +4,12 @@
 function udp_poll(socket, max) {
   const sys = io_sys();
   const fd = socket;
-  const b = new Uint8Array(Math.max(Number(max), 1));
+  const len = Math.min(Number(max), 2147483647);
+  const b = new Uint8Array(Math.max(len, 1));
   const peer = new Uint8Array(16);
-  const len = new Uint32Array([16]);
-  const got = sys.recvfrom(fd, sys.ptr(b), Number(max), 0, sys.ptr(peer),
-    sys.ptr(len));
+  const len2 = new Uint32Array([16]);
+  const got = sys.recvfrom(fd, sys.ptr(b), len, 0, sys.ptr(peer),
+    sys.ptr(len2));
   const n = Number(got);
   if (n < 0 && sys.errno() === (sys.mac ? 35 : 11)) {
     return io_tup(socket, io_done({ $: "None" }));
