@@ -436,8 +436,21 @@ async function cli_publish(file: string): Promise<void> {
   cli_say(2, "publishing " + String(paths.length) + " files, "
     + String(bytes) + " bytes, as " + hash + " (mining its proof of work)\n");
   const nonce = await pow_mine(hash, bytes);
-  const res = await fetch(Bend.BEND_HUB, { method: "POST",
-    body: JSON.stringify({ files, nonce }) });
+  let res: Response;
+  try {
+    res = await fetch(Bend.BEND_HUB, { method: "POST",
+      body: JSON.stringify({ files, nonce }) });
+  } catch (e) {
+    // the POST rejects raw on transport failure (only !ok and hash-mismatch
+    // are house-worded below); name the dead hub instead of leaking the
+    // runtime's TypeError, in the load path's wording.
+    if (e instanceof TypeError && /fetch failed|unable to connect|failed to fetch/i
+      .test((e as Error).message ?? "")) {
+      throw "Error: could not reach the hub at " + Bend.BEND_HUB + ": "
+        + (e as Error).message;
+    }
+    throw e;
+  }
   const got = (await res.text()).trim();
   if (!res.ok || got !== hash) {
     throw "Error: " + Bend.BEND_HUB + " answered: " + got;
