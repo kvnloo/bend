@@ -1191,6 +1191,22 @@ function def_foreign(tld: Bend.TLD | undefined):
 }
 
 
+// Read a foreign def's .js import: a host file that does not parse dies in
+// the house voice, naming the def, instead of a bare SyntaxError from the
+// loader when the program runs.
+function foreign_js_src(path: string, k: Bend.Name): string {
+  const src = fs.readFileSync(path, "utf8");
+  try {
+    new Function(src);
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      die("a foreign def whose .js import fails to parse: " + k);
+    }
+    throw e;
+  }
+  return src;
+}
+
 // Eff
 // ===
 
@@ -3241,23 +3257,23 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
     memo_gc();
     js_def(fl, k, def);
   }
-  const grps = new Map<string, string[]>();
+  const grps = new Map<string, { k: Bend.Name; rows: string[] }>();
   for (const [k, tld] of done_defs(cb, def_foreign)) {
     const path = fs.realpathSync(tld.i!.find((x) => x.endsWith(".js"))
       ?? die("a foreign def without a .js import: " + k));
     js_def(fl, k, tld);
     const n = eff_name(k);
     ms.push(n);
-    const rows = grps.get(path) ?? [];
-    grps.set(path, rows);
+    const e = grps.get(path) ?? { k, rows: [] };
+    grps.set(path, e);
     for (const m of [n, n + "_need"]) {
-      rows.push(`  ${m}: typeof ${m} === "function" ? ${m} : undefined,`);
+      e.rows.push(`  ${m}: typeof ${m} === "function" ? ${m} : undefined,`);
     }
   }
   const dup = ms.find((m, i) => ms.indexOf(m) < i);
   if (dup !== undefined) die("two names mangle to " + dup);
   const effs = grps.size === 0 ? "" : "const $0eff = {\n" + [...grps]
-    .map(([p, rows]) => "...(() => {\n" + fs.readFileSync(p, "utf8")
+    .map(([p, { k, rows }]) => "...(() => {\n" + foreign_js_src(p, k)
       + "\nreturn {\n" + rows.join("\n") + "\n};\n})(),").join("\n")
     + "\n};\n\n";
   const tabs = [...fl.tabs].map(([r, i]) => `const TAB_${i} = [${r}];`);
