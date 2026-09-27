@@ -207,6 +207,9 @@ async function cli_file(args: string[]): Promise<void> {
     if (outs.length !== 1 || only || checkup || publish) {
       cli_fail("a page bundles with -o <dir>");
     }
+    if (!fs.existsSync(file)) {
+      cli_fail("no such file: " + file);
+    }
     return cli_bundle(file, outs[0]);
   }
   if (publish && (outs.length !== 0 || only || checkup)) {
