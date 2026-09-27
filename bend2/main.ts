@@ -49,6 +49,11 @@ Read the guide (\`bend guide\`) before writing Bend code.
 
 const BASE = Bend.BASE_BEND;
 
+// the loader's package directory (bend.ts keeps it private): a 0x import is
+// read from BEND_LIB and fetched from BEND_HUB on a miss
+const BEND_LIB = path.resolve(process.env.BEND_LIB
+  ?? path.join(os.homedir(), ".bend", "lib"));
+
 const GUIDE = path.join(Bend.BEND_DIR, "..", "guide");
 
 const ORIGIN = process.env.BEND_ORIGIN ?? "https://bend-lang.com";
@@ -267,11 +272,17 @@ async function cli_checkup(file: string): Promise<void> {
     if (m === null) {
       continue;
     }
-    const at = path.join(path.dirname(file), m[1]);
+    // a 0x import resolves the way the loader resolves it: from the hub
+    // into BEND_LIB, not from the file's directory
+    const rel = path.posix.normalize(m[1]);
+    const hub = /^0x[0-9a-f]+\//.test(rel);
+    const at = hub ? path.join(BEND_LIB, rel)
+      : path.join(path.dirname(file), m[1]);
     cli_say(1, "--- " + m[1] + " ---\n");
     let code = 1;
     try {
-      const own = /^import Base$/m.test(fs.readFileSync(at, "utf8"));
+      // a hub file fetches on its first read, so it always seeds base
+      const own = hub || /^import Base$/m.test(fs.readFileSync(at, "utf8"));
       code = book_run(...await book_read(at, own ? base : undefined), []);
     } catch (e) {
       cli_say(2, book_err(e) + "\n");
@@ -634,6 +645,14 @@ function book_err(e: unknown): string {
   if (e instanceof RangeError) {
     return "Error: the machine stack overflowed (a deep recursion, or a"
       + " literal too large to expand)";
+  }
+  if (e instanceof TypeError && /fetch failed|unable to connect|failed to fetch/i
+    .test((e as Error).message ?? "")) {
+    // hub_get's fetch rejects raw on transport failure (the loader only
+    // house-words !ok/hash-mismatch); name the dead hub instead of leaking
+    // the runtime's TypeError. The only fetch on the load path is the hub's.
+    return "Error: could not reach the hub at " + Bend.BEND_HUB + ": "
+      + (e as Error).message;
   }
   return err?.$ === "Err" ? Bend.err_show(err) : String(e);
 }
