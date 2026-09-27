@@ -402,13 +402,22 @@ function cli_base(what?: string): void {
 }
 
 async function cli_bundle(page: string, dir: string): Promise<void> {
-  const out = await Bun.build({
-    entrypoints: [page],
-    outdir: dir,
-    target: "browser",
-    minify: true,
-    plugins: [PLUGIN],
-  });
+  if (fs.existsSync(dir) && !fs.statSync(dir).isDirectory()) {
+    cli_fail("-o " + dir + " is a file, not a directory");
+  }
+  let out;
+  try {
+    out = await Bun.build({
+      entrypoints: [page],
+      outdir: dir,
+      target: "browser",
+      minify: true,
+      plugins: [PLUGIN],
+    });
+  } catch (e) {
+    cli_fail("could not bundle " + page + ": "
+      + String((e as Error).message ?? e).split("\n")[0]);
+  }
   for (const a of out.outputs) {
     cli_say(1, a.path + " (" + (a.size / 1024).toFixed(1) + "kb)\n");
   }
