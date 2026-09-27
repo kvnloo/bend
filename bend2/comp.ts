@@ -1207,6 +1207,34 @@ function eff_src(path: string, seen: Set<string>): string {
   return fs.readFileSync(path, "utf8");
 }
 
+// eff_src for a foreign def's .js import: a directory is the house error,
+// not a raw EISDIR (see the missing-file twin in js_lib).
+function foreign_js_src(path: string, k: Bend.Name): string {
+  try {
+    return fs.readFileSync(path, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "EISDIR") throw e;
+    die("a foreign def whose .js import is a directory: " + k);
+  }
+}
+
+// eff_src for a foreign def's .c import: a missing file is the house
+// error, not a raw ENOENT (see the .js side in js_lib).
+function foreign_c_src(path: string, k: Bend.Name, seen: Set<string>): string {
+  try {
+    return eff_src(path, seen);
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      die("a foreign def with a missing .c import: " + k);
+    }
+    if (code === "EISDIR") {
+      die("a foreign def whose .c import is a directory: " + k);
+    }
+    throw e;
+  }
+}
+
 // Io
 // ==
 
@@ -2834,8 +2862,8 @@ function compile_reqs(fl: File): void {
     for (const [m, g] of macs) {
       fl.reqs += `#pragma push_macro("${m}")\n#define ${m} ${g}\n`;
     }
-    fl.reqs += eff_src(tld.i!.find((x) => x.endsWith(".c"))
-      ?? die("no .c import: " + k), seen);
+    fl.reqs += foreign_c_src(tld.i!.find((x) => x.endsWith(".c"))
+      ?? die("no .c import: " + k), k, seen);
     for (const [m] of macs) {
       fl.reqs += `#pragma pop_macro("${m}")\n`;
     }
@@ -3224,7 +3252,8 @@ function js_def(fl: File, k: Bend.Name, def: Def): void {
         js_func(fl, def.h ?? die("unelaborated def " + k), def.T, params);
       } else {
         const n = eff_name(k);
-        file_push(fl, `return { $: "$FFI", run: $0eff.${n}, need: $0eff.${n
+        file_push(fl, `return { $: "$FFI", run: $0eff.${n} ?? io_missing(`
+          + `${JSON.stringify(n)}, ${JSON.stringify(k)}), need: $0eff.${n
           }_need, args: [${params.join(", ")}], kont: ${kont[0]} };`);
       }
     });
@@ -3241,23 +3270,34 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
     memo_gc();
     js_def(fl, k, def);
   }
-  const grps = new Map<string, string[]>();
+  const grps = new Map<string, { k: Bend.Name; rows: string[] }>();
   for (const [k, tld] of done_defs(cb, def_foreign)) {
-    const path = fs.realpathSync(tld.i!.find((x) => x.endsWith(".js"))
-      ?? die("a foreign def without a .js import: " + k));
+    const js = tld.i!.find((x) => x.endsWith(".js"))
+      ?? die("a foreign def without a .js import: " + k);
+    // The loader records a def's .js/.c imports without reading them, so
+    // a missing file reaches the emitter as a raw ENOENT. Fail in the
+    // house voice instead; other IO errors (EACCES and friends) stay raw,
+    // as they do everywhere else in the tool.
+    let path: string;
+    try {
+      path = fs.realpathSync(js);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+      die("a foreign def with a missing .js import: " + k);
+    }
     js_def(fl, k, tld);
     const n = eff_name(k);
     ms.push(n);
-    const rows = grps.get(path) ?? [];
-    grps.set(path, rows);
+    const e = grps.get(path) ?? { k, rows: [] };
+    grps.set(path, e);
     for (const m of [n, n + "_need"]) {
-      rows.push(`  ${m}: typeof ${m} === "function" ? ${m} : undefined,`);
+      e.rows.push(`  ${m}: typeof ${m} === "function" ? ${m} : undefined,`);
     }
   }
   const dup = ms.find((m, i) => ms.indexOf(m) < i);
   if (dup !== undefined) die("two names mangle to " + dup);
   const effs = grps.size === 0 ? "" : "const $0eff = {\n" + [...grps]
-    .map(([p, rows]) => "...(() => {\n" + fs.readFileSync(p, "utf8")
+    .map(([p, { k, rows }]) => "...(() => {\n" + foreign_js_src(p, k)
       + "\nreturn {\n" + rows.join("\n") + "\n};\n})(),").join("\n")
     + "\n};\n\n";
   const tabs = [...fl.tabs].map(([r, i]) => `const TAB_${i} = [${r}];`);
@@ -6333,6 +6373,14 @@ function io_sys() {
 function io_fail(code) {
   const text = String(io_sys().strerror(code));
   return { $: "Fail", error: io_tup(code >>> 0, text) };
+}
+
+// A foreign effect whose .js import never defined its host function: the
+// compiler splices the import verbatim, so only the running program can
+// know. Fail in the house voice, naming the def the user wrote.
+function io_missing(host, def) {
+  throw "bend: a foreign effect without its host function: " + host
+    + " (" + def + ")";
 }
 
 function io_done(value) {
