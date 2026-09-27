@@ -402,6 +402,7 @@ function cli_base(what?: string): void {
 }
 
 async function cli_bundle(page: string, dir: string): Promise<void> {
+  cli_bundle_inline(page);
   const out = await Bun.build({
     entrypoints: [page],
     outdir: dir,
@@ -411,6 +412,34 @@ async function cli_bundle(page: string, dir: string): Promise<void> {
   });
   for (const a of out.outputs) {
     cli_say(1, a.path + " (" + (a.size / 1024).toFixed(1) + "kb)\n");
+  }
+}
+
+// cli_bundle_inline fails loud when the page imports a .bend file from an
+// inline <script>: the bundler leaves inline scripts untouched, so the
+// .bend import is silently dropped and the bundle reports success while
+// the page stays broken. (A missing page is left to the build's own
+// error; only a readable page is scanned.)
+function cli_bundle_inline(page: string): void {
+  let html: string;
+  try {
+    html = fs.readFileSync(page, "utf8");
+  } catch {
+    return;
+  }
+  const scripts = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = scripts.exec(html)) !== null) {
+    if (/\bsrc\s*=\s*("[^"]+"|'[^']+'|[^\s>]+)/i.test(m[1])) {
+      continue;
+    }
+    const body = m[2];
+    if (/\bfrom\s+["'][^"']*\.bend\b["']/i.test(body)
+      || /\bimport\s*\(\s*["'][^"']*\.bend\b["']\s*\)/i.test(body)
+      || /\bimport\s+["'][^"']*\.bend\b["']/i.test(body)) {
+      cli_fail("inline scripts are not bundled: move the .bend import"
+        + " into a <script src=\"...\"> file");
+    }
   }
 }
 
