@@ -271,8 +271,17 @@ async function cli_checkup(file: string): Promise<void> {
     cli_say(1, "--- " + m[1] + " ---\n");
     let code = 1;
     try {
-      const own = /^import Base$/m.test(fs.readFileSync(at, "utf8"));
-      code = book_run(...await book_read(at, own ? base : undefined), []);
+      const st = fs.statSync(at, { throwIfNoEntry: false });
+      if (st !== undefined && st.isDirectory()) {
+        // The loader rejects a directory target (its grammar demands an
+        // import of a .bend file); say so in its expected/observed wording
+        // instead of the read's raw EISDIR.
+        cli_say(2, "Error:\n- expected : an import of a .bend file\n"
+          + "- observed : '" + m[1] + "'\n");
+      } else {
+        const own = /^import Base$/m.test(fs.readFileSync(at, "utf8"));
+        code = book_run(...await book_read(at, own ? base : undefined), []);
+      }
     } catch (e) {
       cli_say(2, book_err(e) + "\n");
     }
