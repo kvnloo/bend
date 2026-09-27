@@ -425,6 +425,10 @@ async function cli_publish(file: string): Promise<void> {
   cli_report(book, n0, 2);
   const files = pkg_files(file, book, seen);
   const entry = Object.keys(files)[0];
+  if (entry === undefined) {
+    // only base itself (or a package of nothing but base) has no files
+    cli_fail("nothing to publish from " + file);
+  }
   const name  = path.basename(entry, ".bend");
   if (name === "") {
     cli_fail("a published file needs a name before .bend");
