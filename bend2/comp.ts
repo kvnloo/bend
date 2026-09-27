@@ -3224,7 +3224,8 @@ function js_def(fl: File, k: Bend.Name, def: Def): void {
         js_func(fl, def.h ?? die("unelaborated def " + k), def.T, params);
       } else {
         const n = eff_name(k);
-        file_push(fl, `return { $: "$FFI", run: $0eff.${n}, need: $0eff.${n
+        file_push(fl, `return { $: "$FFI", run: $0eff.${n} ?? io_missing(`
+          + `${JSON.stringify(n)}, ${JSON.stringify(k)}), need: $0eff.${n
           }_need, args: [${params.join(", ")}], kont: ${kont[0]} };`);
       }
     });
@@ -6333,6 +6334,14 @@ function io_sys() {
 function io_fail(code) {
   const text = String(io_sys().strerror(code));
   return { $: "Fail", error: io_tup(code >>> 0, text) };
+}
+
+// A foreign effect whose .js import never defined its host function: the
+// compiler splices the import verbatim, so only the running program can
+// know. Fail in the house voice, naming the def the user wrote.
+function io_missing(host, def) {
+  throw "bend: a foreign effect without its host function: " + host
+    + " (" + def + ")";
 }
 
 function io_done(value) {
