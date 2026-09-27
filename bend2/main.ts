@@ -635,6 +635,14 @@ function book_err(e: unknown): string {
     return "Error: the machine stack overflowed (a deep recursion, or a"
       + " literal too large to expand)";
   }
+  if (e instanceof TypeError && /fetch failed|unable to connect|failed to fetch/i
+    .test((e as Error).message ?? "")) {
+    // hub_get's fetch rejects raw on transport failure (the loader only
+    // house-words !ok/hash-mismatch); name the dead hub instead of leaking
+    // the runtime's TypeError. The only fetch on the load path is the hub's.
+    return "Error: could not reach the hub at " + Bend.BEND_HUB + ": "
+      + (e as Error).message;
+  }
   return err?.$ === "Err" ? Bend.err_show(err) : String(e);
 }
 
