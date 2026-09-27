@@ -442,8 +442,11 @@ async function cli_publish(file: string): Promise<void> {
   if (!res.ok || got !== hash) {
     throw "Error: " + Bend.BEND_HUB + " answered: " + got;
   }
-  cli_say(1, hash + "\nimport " + hash + "/" + entry + " as "
-    + name[0].toUpperCase() + name.slice(1) + "\n");
+  // the printed import line must parse: the alias is a Bend name, so a file
+  // name with other characters (my-prog.bend) sanitizes to one (My_prog)
+  const alias = (name[0].toUpperCase() + name.slice(1))
+    .replace(/[^A-Za-z0-9_]/g, "_").replace(/^[^A-Za-z_]/, "_");
+  cli_say(1, hash + "\nimport " + hash + "/" + entry + " as " + alias + "\n");
 }
 
 // pkg_files is the package the loader read for this file, the entry first:
