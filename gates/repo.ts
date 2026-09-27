@@ -80,6 +80,12 @@ allow(/^tools\/bend-fmt-lsp\/src\/test\/[a-z_]+\.test\.ts$/, 4000);
 
 function ttok(file: string): number {
   const got = child.spawnSync("ttok", [], { input: fs.readFileSync(file) });
+  if (got.error !== undefined || got.stdout === null) {
+    // the spawn died (ttok not on PATH on a fresh checkout): name the
+    // missing tool instead of throwing on a null stdout.
+    throw new Error("the repo gate needs the ttok binary on PATH: "
+      + (got.error?.message ?? "ttok did not run"));
+  }
   return Number(got.stdout.toString().trim());
 }
 
