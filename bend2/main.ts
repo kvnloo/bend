@@ -271,7 +271,17 @@ async function cli_checkup(file: string): Promise<void> {
     cli_say(1, "--- " + m[1] + " ---\n");
     let code = 1;
     try {
-      const own = /^import Base$/m.test(fs.readFileSync(at, "utf8"));
+      // A missing import is the loader's error to report (its "no such
+      // file", like a direct run of the target), not the read's raw ENOENT.
+      let src = "";
+      try {
+        src = fs.readFileSync(at, "utf8");
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          throw e;
+        }
+      }
+      const own = /^import Base$/m.test(src);
       code = book_run(...await book_read(at, own ? base : undefined), []);
     } catch (e) {
       cli_say(2, book_err(e) + "\n");
