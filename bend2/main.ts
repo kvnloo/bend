@@ -440,20 +440,24 @@ async function cli_publish(file: string): Promise<void> {
   cli_say(2, "publishing " + String(paths.length) + " files, "
     + String(bytes) + " bytes, as " + hash + " (mining its proof of work)\n");
   const nonce = await pow_mine(hash, bytes);
-  let res: Response;
+  let got: string;
+  let status: number;
+  let ok: boolean;
   try {
-    res = await fetch(Bend.BEND_HUB, { method: "POST",
+    const res = await fetch(Bend.BEND_HUB, { method: "POST",
       body: JSON.stringify({ files, nonce }),
       signal: AbortSignal.timeout(PUBLISH_TIMEOUT) });
+    got = (await res.text()).trim();
+    status = res.status;
+    ok = res.ok;
   } catch (e) {
     const why = e instanceof Error && e.name === "TimeoutError"
       ? "the POST timed out after " + String(PUBLISH_TIMEOUT / 1000) + "s"
       : String(e);
     throw "Error: could not reach the hub at " + Bend.BEND_HUB + ": " + why;
   }
-  const got = (await res.text()).trim();
-  if (!res.ok || got !== hash) {
-    throw "Error: " + Bend.BEND_HUB + " answered " + String(res.status)
+  if (!ok || got !== hash) {
+    throw "Error: " + Bend.BEND_HUB + " answered " + String(status)
       + ": " + got.slice(0, 200);
   }
   cli_say(1, hash + "\nimport " + hash + "/" + entry + " as "
