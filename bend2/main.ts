@@ -286,15 +286,26 @@ async function cli_checkup(file: string): Promise<void> {
   }
 }
 
+// emit_write writes an emitted file, failing loud in house style when the
+// write itself fails (a missing parent directory, a read-only file):
+// the raw runtime error never reaches the user.
+function emit_write(out: string, text: string): void {
+  try {
+    fs.writeFileSync(out, text);
+  } catch (e) {
+    cli_fail("could not write " + out + ": " + (e as Error).message);
+  }
+}
+
 function path_real(p: string): string {
   return fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p);
 }
 
 function cli_emit(book: Bend.Book, out: string): void {
   if (out.endsWith(".js")) {
-    fs.writeFileSync(out, Comp.js_book(book));
+    emit_write(out, Comp.js_book(book));
   } else if (out.endsWith(".c")) {
-    fs.writeFileSync(out, Comp.compile_book(book));
+    emit_write(out, Comp.compile_book(book));
   } else {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bend-"));
     const c   = path.join(dir, path.basename(out) + ".c");
