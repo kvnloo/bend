@@ -6384,7 +6384,11 @@ function io_wait(io) {
   const fire = io.waits.filter((w) =>
     (buf[2 * fds.indexOf(w) + 1] >>> 16) !== 0 || w.at <= now);
   io.waits = io.waits.filter((w) => !fire.includes(w));
-  for (const w of fire) {
+  // Expired timers fire in deadline order, not in the order their
+  // computations parked: poll can oversleep past several deadlines at once,
+  // and the run queue is FIFO. The sort is stable, so fd-only waits keep
+  // their relative order.
+  for (const w of fire.sort((a, b) => (a.at ?? Infinity) - (b.at ?? Infinity))) {
     io_push(io_wake, w, false);
   }
 }
