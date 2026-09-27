@@ -296,7 +296,15 @@ function cli_emit(book: Bend.Book, out: string): void {
   } else if (out.endsWith(".c")) {
     fs.writeFileSync(out, Comp.compile_book(book));
   } else {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bend-"));
+    // The binary path stages through a temp dir: a bad TMPDIR (or a
+    // read-only one) must fail loud in house style like the -o writes
+    // above, instead of leaking the runtime's raw mkdtemp dump.
+    let dir: string;
+    try {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), "bend-"));
+    } catch (e) {
+      cli_fail("could not write " + out + ": " + (e as Error).message);
+    }
     const c   = path.join(dir, path.basename(out) + ".c");
     fs.writeFileSync(c, Comp.compile_book(book));
     try {
