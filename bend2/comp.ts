@@ -1198,6 +1198,19 @@ function eff_name(k: Bend.Name): string {
   return (LOCAL.get(k) ?? k).toLowerCase().replace(/[./]/g, "_");
 }
 
+// A mangled foreign name is spliced as a bare identifier into the $0eff
+// table (typeof <n> === "function" ? <n> : undefined): a JS reserved word
+// there is a raw SyntaxError from new Function. Probe the exact splice
+// position instead of keeping a word list.
+function js_id_ok(n: string): boolean {
+  try {
+    new Function("return typeof " + n + ";");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function eff_src(path: string, seen: Set<string>): string {
   path = fs.realpathSync(path);
   if (seen.has(path)) {
@@ -3247,6 +3260,7 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
       ?? die("a foreign def without a .js import: " + k));
     js_def(fl, k, tld);
     const n = eff_name(k);
+    if (!js_id_ok(n)) die("a foreign def mangles to a reserved word: " + k);
     ms.push(n);
     const rows = grps.get(path) ?? [];
     grps.set(path, rows);
