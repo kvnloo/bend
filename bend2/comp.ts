@@ -1198,6 +1198,16 @@ function eff_name(k: Bend.Name): string {
   return (LOCAL.get(k) ?? k).toLowerCase().replace(/[./]/g, "_");
 }
 
+// A foreign import is stored as the bend file's dir + the import text,
+// which turns an absolute import into dir + "/abs/path". Recover the
+// absolute path when the stored one misses but its tail hits.
+function eff_path(stored: string): string {
+  if (fs.existsSync(stored)) return stored;
+  const i = stored.lastIndexOf("//");
+  const abs = i < 0 ? "" : stored.slice(i + 1);
+  return abs.startsWith("/") && fs.existsSync(abs) ? abs : stored;
+}
+
 function eff_src(path: string, seen: Set<string>): string {
   path = fs.realpathSync(path);
   if (seen.has(path)) {
@@ -2834,8 +2844,8 @@ function compile_reqs(fl: File): void {
     for (const [m, g] of macs) {
       fl.reqs += `#pragma push_macro("${m}")\n#define ${m} ${g}\n`;
     }
-    fl.reqs += eff_src(tld.i!.find((x) => x.endsWith(".c"))
-      ?? die("no .c import: " + k), seen);
+    fl.reqs += eff_src(eff_path(tld.i!.find((x) => x.endsWith(".c"))
+      ?? die("no .c import: " + k)), seen);
     for (const [m] of macs) {
       fl.reqs += `#pragma pop_macro("${m}")\n`;
     }
@@ -3243,8 +3253,8 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
   }
   const grps = new Map<string, string[]>();
   for (const [k, tld] of done_defs(cb, def_foreign)) {
-    const path = fs.realpathSync(tld.i!.find((x) => x.endsWith(".js"))
-      ?? die("a foreign def without a .js import: " + k));
+    const path = fs.realpathSync(eff_path(tld.i!.find((x) => x.endsWith(".js"))
+      ?? die("a foreign def without a .js import: " + k)));
     js_def(fl, k, tld);
     const n = eff_name(k);
     ms.push(n);
