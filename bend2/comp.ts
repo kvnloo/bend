@@ -3247,7 +3247,10 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
       ?? die("a foreign def without a .js import: " + k));
     js_def(fl, k, tld);
     const n = eff_name(k);
-    ms.push(n);
+    // The $0eff rows use both n and n+"_need" as keys, so both take part
+    // in the collision check: two defs fx and fx_need otherwise both emit
+    // an fx_need row and the later spread silently wins.
+    ms.push(n, n + "_need");
     const rows = grps.get(path) ?? [];
     grps.set(path, rows);
     for (const m of [n, n + "_need"]) {
