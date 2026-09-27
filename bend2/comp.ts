@@ -1207,6 +1207,17 @@ function eff_src(path: string, seen: Set<string>): string {
   return fs.readFileSync(path, "utf8");
 }
 
+// eff_src for a foreign def's .c import: a missing file is the house
+// error, not a raw ENOENT (see the .js side in js_lib).
+function foreign_c_src(path: string, k: Bend.Name, seen: Set<string>): string {
+  try {
+    return eff_src(path, seen);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    die("a foreign def with a missing .c import: " + k);
+  }
+}
+
 // Io
 // ==
 
@@ -2834,8 +2845,8 @@ function compile_reqs(fl: File): void {
     for (const [m, g] of macs) {
       fl.reqs += `#pragma push_macro("${m}")\n#define ${m} ${g}\n`;
     }
-    fl.reqs += eff_src(tld.i!.find((x) => x.endsWith(".c"))
-      ?? die("no .c import: " + k), seen);
+    fl.reqs += foreign_c_src(tld.i!.find((x) => x.endsWith(".c"))
+      ?? die("no .c import: " + k), k, seen);
     for (const [m] of macs) {
       fl.reqs += `#pragma pop_macro("${m}")\n`;
     }
@@ -3244,8 +3255,19 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
   }
   const grps = new Map<string, string[]>();
   for (const [k, tld] of done_defs(cb, def_foreign)) {
-    const path = fs.realpathSync(tld.i!.find((x) => x.endsWith(".js"))
-      ?? die("a foreign def without a .js import: " + k));
+    const js = tld.i!.find((x) => x.endsWith(".js"))
+      ?? die("a foreign def without a .js import: " + k);
+    // The loader records a def's .js/.c imports without reading them, so
+    // a missing file reaches the emitter as a raw ENOENT. Fail in the
+    // house voice instead; other IO errors (EACCES and friends) stay raw,
+    // as they do everywhere else in the tool.
+    let path: string;
+    try {
+      path = fs.realpathSync(js);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+      die("a foreign def with a missing .js import: " + k);
+    }
     js_def(fl, k, tld);
     const n = eff_name(k);
     ms.push(n);
