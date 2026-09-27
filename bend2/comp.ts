@@ -2672,8 +2672,21 @@ function emit_tab(fl: File, rows: Chain, ty: HTerm): number | null {
   const key = fl.decl === "const" ? ls.join(", ") : Function("return ["
     + ls + "]")().map((v: number) => (adt?.k === "F32"
     ? Bend.f32_to_bits(v) : BigInt(v)) + "ull").join(", ");
-  const id = fl.tabs.get(key) ?? fl.tabs.size;
+  // A user binder named TAB takes TAB_0, TAB_1, ... from the same counter
+  // name_local uses, so a table id that collides with a live binder is
+  // shadowed inside its function and the lookup reads the binder instead
+  // of the table. Reserve the TAB namespace both ways: skip ids already
+  // handed to binders, and mark the chosen id taken so later binders skip
+  // it. fl.fresh resets per def, which is exactly the shadowing scope.
+  const taken = fl.fresh.get("TAB") ?? 0;
+  let id = fl.tabs.get(key);
+  if (id === undefined) {
+    // fl.tabs.size undercounts once ids are skipped past binder-taken
+    // names, so the next id must clear every id handed out so far.
+    id = Math.max(taken, ...[...fl.tabs.values()].map((v) => v + 1));
+  }
   fl.tabs.set(key, id);
+  fl.fresh.set("TAB", Math.max(taken, id + 1));
   return id;
 }
 
