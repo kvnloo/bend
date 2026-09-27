@@ -1198,8 +1198,15 @@ function eff_name(k: Bend.Name): string {
   return (LOCAL.get(k) ?? k).toLowerCase().replace(/[./]/g, "_");
 }
 
-function eff_src(path: string, seen: Set<string>): string {
-  path = fs.realpathSync(path);
+function eff_src(path: string, seen: Set<string>, k: Bend.Name): string {
+  // A symlink loop reaches the emitter as a raw ELOOP; fail in the house
+  // voice instead, naming the def whose import cannot be resolved.
+  try {
+    path = fs.realpathSync(path);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ELOOP") throw e;
+    die("a foreign def whose .c import is a symlink loop: " + k);
+  }
   if (seen.has(path)) {
     return "";
   }
@@ -2835,7 +2842,7 @@ function compile_reqs(fl: File): void {
       fl.reqs += `#pragma push_macro("${m}")\n#define ${m} ${g}\n`;
     }
     fl.reqs += eff_src(tld.i!.find((x) => x.endsWith(".c"))
-      ?? die("no .c import: " + k), seen);
+      ?? die("no .c import: " + k), seen, k);
     for (const [m] of macs) {
       fl.reqs += `#pragma pop_macro("${m}")\n`;
     }
@@ -3243,8 +3250,17 @@ export function js_lib(book: Bend.Book, roots: Bend.Name[],
   }
   const grps = new Map<string, string[]>();
   for (const [k, tld] of done_defs(cb, def_foreign)) {
-    const path = fs.realpathSync(tld.i!.find((x) => x.endsWith(".js"))
-      ?? die("a foreign def without a .js import: " + k));
+    const imp = tld.i!.find((x) => x.endsWith(".js"))
+      ?? die("a foreign def without a .js import: " + k);
+    // A symlink loop reaches the emitter as a raw ELOOP; fail in the house
+    // voice instead, naming the def whose import cannot be resolved.
+    let path: string;
+    try {
+      path = fs.realpathSync(imp);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ELOOP") throw e;
+      die("a foreign def whose .js import is a symlink loop: " + k);
+    }
     js_def(fl, k, tld);
     const n = eff_name(k);
     ms.push(n);
