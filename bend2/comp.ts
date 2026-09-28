@@ -161,7 +161,10 @@ const BOX: Lay = { ks: ["box"], arms: null };
 
 const W64: Lay = { ks: ["w64"], arms: null };
 
-const WORDS: Record<string, Lay> = { U32: W32, F32: W32, Nat: W64 };
+// No prototype: a user datatype named __proto__, constructor or toString
+// must not see Object.prototype through a WORDS lookup.
+const WORDS: Record<string, Lay> = Object.setPrototypeOf(
+  { U32: W32, F32: W32, Nat: W64 }, null);
 
 // The widest flat datatype: the shader's Tri is 24 words.
 const WIDE = 256;
@@ -1270,8 +1273,10 @@ function show_main(book: Bend.Book): Show | null {
     if (adt === null || adt.k === "IO.OP" || tld?.$ !== "ADT") {
       return refuse();
     }
-    const kind = { U32: 0, F32: 1, Nat: 2, Char: 3, String: 4, Array: 6 }[adt.k]
-      ?? 7;
+    // No object literal: a datatype named __proto__, constructor or
+    // toString must not read Object.prototype (or a builtin) as its kind.
+    const kind = "U32 F32 Nat Char String . Array".split(" ").indexOf(adt.k)
+      & 7;
     const id = show.cells.push(kind) - 1;
     ids.set(key, id);
     const refs: [number, HTerm, Lay][] = [];
