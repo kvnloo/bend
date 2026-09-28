@@ -2188,8 +2188,18 @@ function emit_native(fl: File, ck: Call, ers: HTerm[]): string {
   if (got !== undefined) {
     return seg_ref(fl, got);
   }
-  const name = seg_ref(fl, `spin_${fl.spun.size}`);
+  // A user binder named spin takes spin_0, spin_1, ... from the same counter
+  // name_local uses, so a spun segment id that collides with a live binder is
+  // shadowed inside its function and the call reads the binder instead of the
+  // segment. Reserve the spin namespace both ways: skip ids already handed to
+  // binders, and mark the chosen id taken so later binders skip it. fl.fresh
+  // resets per def, which is exactly the shadowing scope.
+  const taken = fl.fresh.get("spin") ?? 0;
+  const id = Math.max(taken,
+    ...[...fl.spun.values()].map((s) => parseInt(s.slice(5), 10) + 1));
+  const name = seg_ref(fl, `spin_${id}`);
   fl.spun.set(key, name);
+  fl.fresh.set("spin", Math.max(taken, id + 1));
   const tld = fl.book.tlds[ck.k] as Def;
   const outer = { ...fl };
   const vals = emit_open(fl, ck.k);
