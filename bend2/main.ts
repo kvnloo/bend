@@ -326,7 +326,8 @@ async function cli_checkup(file: string): Promise<void> {
   const base = await book_read(BASE);
   let bad = false;
   for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
-    const m = /^import\s+(\S+)\s+as\s+[A-Za-z_][A-Za-z0-9_]*\s*$/
+    // trailing # comment matches the loader's import-line grammar
+    const m = /^import\s+(\S+)\s+as\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:#.*)?$/
       .exec(raw.trim());
     if (m === null) {
       continue;
