@@ -72,3 +72,41 @@ test("leaves unterminated literals unchanged", () => {
   const source = "def main() -> String:\n  \"unfinished";
   assert.equal(formatBend(source), source);
 });
+
+test("comment-only lines do not change the following code's indentation", () => {
+  const source = "def main() -> U32:\n    a = 1\n  # same block\n    a\n";
+  const expected = "def main() -> U32:\n  a = 1\n  # same block\n  a\n";
+  assert.equal(formatBend(source), expected);
+  assert.equal(formatBend(expected), expected);
+});
+
+test("comment placement preserves formatted code and idempotence", () => {
+  const lines = [
+    "def choose(x: Bool) -> U32:",
+    "    match x:",
+    "        case True{}:",
+    "            1",
+    "        case False{}:",
+    "            0",
+    "def main() -> String:",
+    "    \"# literal, not a comment\"",
+  ];
+  const stripComments = (text: string) => text.split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith("#")).join("\n");
+  for (const options of [{ tabSize: 2 }, { tabSize: 4 }, { insertSpaces: false }]) {
+    for (const eol of ["\n", "\r\n"]) {
+      for (const final of ["", eol]) {
+        const expected = stripComments(formatBend(lines.join(eol) + final, options));
+        for (let at = 0; at <= lines.length; at++) {
+          for (const indent of ["", " ", "  ", "    ", "      ", "        ", "            ", "                ", "\t", " \t"]) {
+            const input = [...lines.slice(0, at), indent + "# keep", ...lines.slice(at)].join(eol) + final;
+            const once = formatBend(input, options);
+            assert.equal(stripComments(once), expected);
+            assert.equal(once.split(/\r?\n/)[at].trimStart(), "# keep");
+            assert.equal(formatBend(once, options), once);
+          }
+        }
+      }
+    }
+  }
+});
