@@ -6189,6 +6189,17 @@ function cli(argv) {
       io_out(1, io_bytes("usage: " + argv[0] + "\n"));
       process.exit(0);
     } else if (argv[i] === "--threads" || argv[i] === "--gpu") {
+      // Mirror native validation: a typo must fail loud, not eat the next arg.
+      const f = argv[i], v = argv[i + 1];
+      if (f === "--threads" && !(v && /^[+-]?\d+$/.test(v) && +v >= 1)) {
+        io_out(2, io_bytes("bend: expected a thread count of 1 or more after --threads\n"));
+        process.exit(1);
+      }
+      if (f === "--gpu" && !(v === "on" || v === "off"
+        || (v && /^[0-9]*\.?[0-9]+(GB|MB)$/.test(v) && parseFloat(v) > 0))) {
+        io_out(2, io_bytes("bend: expected on, off or a size like 4GB after --gpu\n"));
+        process.exit(1);
+      }
       i += 1;
     } else {
       cli_args.push(argv[i]);
