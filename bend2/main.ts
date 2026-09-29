@@ -325,7 +325,16 @@ async function cli_file(args: string[]): Promise<void> {
 async function cli_checkup(file: string): Promise<void> {
   const base = await book_read(BASE);
   let bad = false;
-  for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
+  let lines: string[];
+  try {
+    lines = fs.readFileSync(file, "utf8").split("\n");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      cli_fail("no such file: " + file);
+    }
+    throw e;
+  }
+  for (const raw of lines) {
     const m = /^import\s+(\S+)\s+as\s+[A-Za-z_][A-Za-z0-9_]*\s*$/
       .exec(raw.trim());
     if (m === null) {
