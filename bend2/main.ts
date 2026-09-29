@@ -269,6 +269,16 @@ async function cli_file(args: string[]): Promise<void> {
     cli_say(1, HELP);
     process.exit(1);
   }
+  {
+    // book_load / Bun.build die raw (EISDIR / ModuleNotFound) on a
+    // directory operand; fail loud in expected/observed wording first.
+    const st = fs.statSync(file, { throwIfNoEntry: false });
+    if (st !== undefined && st.isDirectory()) {
+      cli_say(2, "Error:\n- expected : a .bend file (an .html page to bundle)\n"
+        + "- observed : '" + file + "'\n");
+      process.exit(1);
+    }
+  }
   if (file.endsWith(".html")) {
     if (outs.length !== 1 || only || checkup || publish) {
       cli_fail("a page bundles with -o <dir>");
