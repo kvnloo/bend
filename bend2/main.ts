@@ -256,7 +256,15 @@ async function cli_file(args: string[]): Promise<void> {
       i += 1;
       outs.push(args[i] ?? cli_fail("-o needs an output file"));
     } else if (a === "--") {
-      argv.push(...args.splice(i + 1));
+      // POSIX: first positional after -- is the file when none was named
+      // yet (a dash-prefixed file is otherwise "unknown option").
+      const rest = args.splice(i + 1);
+      if (file === undefined && rest.length !== 0) {
+        file = rest[0];
+        argv.push(...rest.slice(1));
+      } else {
+        argv.push(...rest);
+      }
     } else if (a.startsWith("-")) {
       cli_fail("unknown option " + a);
     } else if (file !== undefined) {
