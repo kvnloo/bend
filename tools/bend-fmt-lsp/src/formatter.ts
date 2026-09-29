@@ -166,10 +166,12 @@ function indentDepths(lines: Line[]): number[] {
       continue;
     }
     const width = [...line.indent].reduce((n, char) => n + (char === "\t" ? 8 - n % 8 : 1), 0);
-    while (stack.length > 1 && width < stack[stack.length - 1]) stack.pop();
-    if (width > stack[stack.length - 1]) stack.push(width);
-    else if (width !== stack[stack.length - 1]) stack[stack.length - 1] = width;
-    depths.push(stack.length - 1);
+    // Comments take an indentation level without changing the code's stack.
+    const levels = line.code === "" ? [...stack] : stack;
+    while (levels.length > 1 && width < levels[levels.length - 1]) levels.pop();
+    if (width > levels[levels.length - 1]) levels.push(width);
+    else if (width !== levels[levels.length - 1]) levels[levels.length - 1] = width;
+    depths.push(levels.length - 1);
   }
   return depths;
 }
