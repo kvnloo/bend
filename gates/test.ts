@@ -51,11 +51,18 @@ function test_read(dir: string, file: string): Test {
   const src = fs.readFileSync(path.join(TESTS, dir, file), "utf8");
   const want = src.split("\n").filter((l) => l.startsWith("#|"))
     .map((l) => l.slice(2)).join("\n");
-  const effs = [...src.matchAll(/^\s*import "\.\/[a-z0-9_]+\.(c|js)"$/gm)]
-    .map((m) => m[1]);
+  // Foreign imports pick the lanes. Def-body `import "./x.js"` allows a
+  // trailing '# comment' (parse_skip); end-of-line patterns miss those.
+  const effs = src.split("\n").flatMap((l) => {
+    const m = /^\s*import\s+"(\.\/[a-z0-9_]+\.(c|js))"\s*(?:#.*)?$/.exec(l);
+    return m === null ? [] : [m[2]];
+  });
   // A program compiles only over Base (its IO runs main): a test without
-  // it checks and interprets alone.
-  const lanes = ["js", "c"].filter((l) => /^import Base$/m.test(src)
+  // it checks and interprets alone. Read like the loader via import_line:
+  // trailing '# comment' and extra spaces are legal.
+  const base = src.split("\n")
+    .some((l) => lib.import_line(l)?.[0] === "Base");
+  const lanes = ["js", "c"].filter((l) => base
     && (effs.length === 0 || effs.includes(l)));
   return { name: dir + "_" + path.basename(file, ".bend"), src,
     want: tidy(want), main: /^(def|law) main(\(|:)/m.test(src), lanes };

@@ -13,6 +13,19 @@ export type Exec = { out: string; err: string; code: number };
 
 export type Job = (node: number) => Promise<void>;
 
+// import_line reads one source line the way the loader does (bend.ts
+// book_load): 'import Base', or 'import <path> as <Name>', each with an
+// optional trailing comment. Gates that scan imports need the loader's
+// reading: a narrower pattern silently misreads commented imports.
+export function import_line(line: string): [string, string] | null {
+  const m = /^import\s+(\S+)(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?\s*(?:#.*)?$/
+    .exec(line.trim());
+  if (m === null || (m[2] === undefined && m[1] !== "Base")) {
+    return null;
+  }
+  return [m[1], m[2] ?? ""];
+}
+
 // Constants
 // =========
 
