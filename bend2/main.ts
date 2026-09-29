@@ -183,7 +183,18 @@ async function check(): Promise<void> {
   }
   let last = { t: 0, ver: VERSION, notice: "" };
   try {
-    last = { ...last, ...JSON.parse(fs.readFileSync(CHECK, "utf8")) };
+    // Only accept field types we write: a hand-edited check.json must not
+    // TypeError after the command already ran (ver.split / notice.replace).
+    const got = JSON.parse(fs.readFileSync(CHECK, "utf8"));
+    if (typeof got.t === "number") {
+      last.t = got.t;
+    }
+    if (typeof got.ver === "string") {
+      last.ver = got.ver;
+    }
+    if (typeof got.notice === "string") {
+      last.notice = got.notice;
+    }
   } catch {}
   try {
     if (Date.now() - last.t > DAY) {
