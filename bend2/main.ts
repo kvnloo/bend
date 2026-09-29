@@ -331,8 +331,7 @@ async function cli_checkup(file: string): Promise<void> {
     if (m === null) {
       continue;
     }
-    const at = m[1].startsWith("/") ? m[1]
-      : path.join(path.dirname(file), m[1]);
+    const at = import_at(path.dirname(file), m[1]);
     cli_say(1, "--- " + m[1] + " ---\n");
     let code = 1;
     try {
@@ -353,6 +352,19 @@ async function cli_checkup(file: string): Promise<void> {
 
 function path_real(p: string): string {
   return fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p);
+}
+
+// import_at resolves an import path the way the loader does: relative
+// against the importing file, absolute as itself, hub (0x...) under BEND_LIB.
+function import_at(dir: string, rel: string): string {
+  if (rel.startsWith("/")) {
+    return rel;
+  }
+  if (/^0x[0-9a-f]+\//.test(rel)) {
+    return path.join(path.resolve(process.env.BEND_LIB
+      ?? path.join(os.homedir(), ".bend", "lib")), rel);
+  }
+  return path.join(dir, rel);
 }
 
 function cli_emit(book: Bend.Book, out: string): void {
