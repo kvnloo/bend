@@ -154,7 +154,12 @@ async function cli(): Promise<void> {
 }
 
 // cli_guide prints guide/<NAME>.md: the guide, or a named extra.
+// The name is a single path segment ([A-Za-z0-9_-]+); anything else is
+// rejected before join, so ../AGENTS cannot leave guide/.
 function cli_guide(name: string): void {
+  if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+    cli_fail("no guide named " + name);
+  }
   const file = path.join(GUIDE, name.toUpperCase() + ".md");
   if (!fs.existsSync(file)) {
     cli_fail("no guide named " + name);
