@@ -1,0 +1,73 @@
+version: 1
+repo: kvnloo/bend
+id: bend
+kind: suite
+summary: Proof-oriented parallel language and compiler substrate explored by Zer0 for mechanically enforceable orchestration and implementation contracts.
+
+architecture:
+  subsystems:
+    - id: language-core
+      name: Bend language core
+      kind: language
+      summary: Defines the typed functional language, base library, parser/checker surface, effects, and user-facing compilation entry points.
+      paths:
+        - bend2/
+        - guide/
+
+    - id: proof-checker
+      name: Laws and proof checker
+      kind: verification
+      summary: Checks dependent-type laws and proofs so specified invariants can fail closed before code is accepted.
+      paths:
+        - bend2/
+        - tests/check/
+        - gates/
+      depends_on: [language-core]
+
+    - id: parallel-runtime
+      name: Parallel runtime and effects
+      kind: execution
+      summary: Compiles pure parallel programs and effectful boundaries toward multicore/GPU execution.
+      paths:
+        - bend2/effs/
+        - bend2/
+        - bench/
+      depends_on: [language-core]
+
+    - id: validation-surface
+      name: Compiler validation corpus
+      kind: evidence
+      summary: Exercises language semantics, proof checking, base operations, regressions, and performance gates independently from Zer0 integration experiments.
+      paths:
+        - tests/
+        - evals/
+        - bench/
+        - gates/
+      depends_on: [language-core, proof-checker]
+
+  provides_interfaces: []
+  consumes_interfaces: []
+  produces_representations: []
+  consumes_representations: []
+
+  boundaries:
+    owns:
+      - Bend language and compiler semantics
+      - proof checking
+      - parallel compilation and runtime
+      - compiler regression corpus
+    not_here:
+      - AODL ontology
+      - z0intelligence runtime policy
+      - deciding which Zer0 contracts should be formalized
+      - Zer0 architecture authority
+
+  evidence:
+    docs:
+      - README.md
+      - guide/
+      - paper/
+    tests:
+      - tests/
+      - gates/
+    schemas: []
