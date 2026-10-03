@@ -1,0 +1,702 @@
+{
+ "host": {
+  "loadavg": [
+   "2.34",
+   "2.01",
+   "2.08"
+  ],
+  "top_cpu_now": [
+   "62.2% Hyprland",
+   "4.8% kube-apiserver",
+   "4.8% kube-controller",
+   "4.8% 2.1.288",
+   "4.8% top"
+  ],
+  "time_utc": "2026-10-03T19:01:17Z"
+ },
+ "repeats": [
+  {
+   "order": [
+    "A_python",
+    "B_adapter_ref_t1",
+    "C1_pipe_ref_t1",
+    "C2_pipe_ref_default_threads",
+    "C3_pipe_ref_native_t1",
+    "C5_pipe_par_t1"
+   ],
+   "results": {
+    "A_python": {
+     "all": {
+      "n": 22079,
+      "p50": 40.03,
+      "p95": 94.69,
+      "p99": 120.01,
+      "mean": 43.44,
+      "min": 1.72
+     },
+     "kernel_routed": {
+      "n": 10019,
+      "p50": 41.17,
+      "p95": 95.75,
+      "p99": 122.26,
+      "mean": 46.52,
+      "min": 6.16
+     },
+     "cpu_us_per_decision": 43.71
+    },
+    "B_adapter_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 102.11,
+      "p95": 461.83,
+      "p99": 600.7,
+      "mean": 147.37,
+      "min": 0.71
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 231.34,
+      "p95": 582.6,
+      "p99": 624.1,
+      "mean": 266.06,
+      "min": 96.31
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.66,
+      "p95": 114.27,
+      "p99": 124.74,
+      "mean": 57.42,
+      "min": 18.68
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 179.49,
+      "p95": 471.75,
+      "p99": 505.27,
+      "mean": 208.63,
+      "min": 77.64
+     },
+     "host_cpu_us_per_decision": 103.09,
+     "kernel_cpu_us_per_kernel_decision": 151.71,
+     "kernel_peak_rss_kb": 8832,
+     "mismatches_vs_reference": 0
+    },
+    "C1_pipe_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 102.97,
+      "p95": 453.22,
+      "p99": 598.4,
+      "mean": 144.23,
+      "min": 0.74
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 222.54,
+      "p95": 575.17,
+      "p99": 617.95,
+      "mean": 257.45,
+      "min": 86.48
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.87,
+      "p95": 115.03,
+      "p99": 130.54,
+      "mean": 57.91,
+      "min": 18.69
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 169.99,
+      "p95": 463.29,
+      "p99": 494.05,
+      "mean": 199.54,
+      "min": 65.32
+     },
+     "host_cpu_us_per_decision": 71.67,
+     "kernel_cpu_us_per_kernel_decision": 157.7,
+     "kernel_peak_rss_kb": 8840,
+     "mismatches_vs_reference": 0
+    },
+    "C2_pipe_ref_default_threads": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 98.99,
+      "p95": 446.77,
+      "p99": 581.72,
+      "mean": 138.04,
+      "min": 0.68
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 211.26,
+      "p95": 561.43,
+      "p99": 601.64,
+      "mean": 247.22,
+      "min": 72.34
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.83,
+      "p95": 111.78,
+      "p99": 122.96,
+      "mean": 55.7,
+      "min": 18.43
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 161.19,
+      "p95": 453.5,
+      "p99": 485.12,
+      "mean": 191.51,
+      "min": 53.91
+     },
+     "host_cpu_us_per_decision": 69.29,
+     "kernel_cpu_us_per_kernel_decision": 153.71,
+     "kernel_peak_rss_kb": 8884,
+     "mismatches_vs_reference": 0
+    },
+    "C3_pipe_ref_native_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 99.38,
+      "p95": 445.17,
+      "p99": 587.53,
+      "mean": 139.02,
+      "min": 0.66
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 211.95,
+      "p95": 566.63,
+      "p99": 608.69,
+      "mean": 249.06,
+      "min": 87.21
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.65,
+      "p95": 111.5,
+      "p99": 121.58,
+      "mean": 55.47,
+      "min": 17.95
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 162.11,
+      "p95": 458.17,
+      "p99": 490.38,
+      "mean": 193.59,
+      "min": 63.36
+     },
+     "host_cpu_us_per_decision": 69.24,
+     "kernel_cpu_us_per_kernel_decision": 153.71,
+     "kernel_peak_rss_kb": 8852,
+     "mismatches_vs_reference": 0
+    },
+    "C5_pipe_par_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 100.61,
+      "p95": 451.8,
+      "p99": 584.2,
+      "mean": 140.93,
+      "min": 0.64
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 212.42,
+      "p95": 560.2,
+      "p99": 614.06,
+      "mean": 250.86,
+      "min": 73.69
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.44,
+      "p95": 113.37,
+      "p99": 142.3,
+      "mean": 57.69,
+      "min": 18.39
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 162.26,
+      "p95": 450.64,
+      "p99": 491.85,
+      "mean": 193.18,
+      "min": 55.3
+     },
+     "host_cpu_us_per_decision": 72.02,
+     "kernel_cpu_us_per_kernel_decision": 152.71,
+     "kernel_peak_rss_kb": 8820,
+     "mismatches_vs_reference": 0
+    }
+   }
+  },
+  {
+   "order": [
+    "B_adapter_ref_t1",
+    "C1_pipe_ref_t1",
+    "C2_pipe_ref_default_threads",
+    "C3_pipe_ref_native_t1",
+    "C5_pipe_par_t1",
+    "A_python"
+   ],
+   "results": {
+    "B_adapter_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 101.4,
+      "p95": 469.01,
+      "p99": 608.96,
+      "mean": 148.91,
+      "min": 0.7
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 232.55,
+      "p95": 584.69,
+      "p99": 631.22,
+      "mean": 269.69,
+      "min": 106.34
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.48,
+      "p95": 113.6,
+      "p99": 125.35,
+      "mean": 57.25,
+      "min": 20.25
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 180.59,
+      "p95": 473.99,
+      "p99": 516.32,
+      "mean": 212.43,
+      "min": 83.46
+     },
+     "host_cpu_us_per_decision": 103.35,
+     "kernel_cpu_us_per_kernel_decision": 153.71,
+     "kernel_peak_rss_kb": 6832,
+     "mismatches_vs_reference": 0
+    },
+    "C1_pipe_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 98.03,
+      "p95": 437.14,
+      "p99": 583.46,
+      "mean": 138.5,
+      "min": 0.71
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 210.64,
+      "p95": 559.16,
+      "p99": 617.73,
+      "mean": 248.47,
+      "min": 86.61
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.42,
+      "p95": 110.6,
+      "p99": 123.26,
+      "mean": 55.61,
+      "min": 18.6
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 161.18,
+      "p95": 452.63,
+      "p99": 503.02,
+      "mean": 192.86,
+      "min": 65.14
+     },
+     "host_cpu_us_per_decision": 69.21,
+     "kernel_cpu_us_per_kernel_decision": 154.71,
+     "kernel_peak_rss_kb": 8808,
+     "mismatches_vs_reference": 0
+    },
+    "C2_pipe_ref_default_threads": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 98.69,
+      "p95": 443.99,
+      "p99": 582.13,
+      "mean": 138.78,
+      "min": 0.7
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 212.17,
+      "p95": 560.62,
+      "p99": 601.95,
+      "mean": 248.59,
+      "min": 82.1
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.29,
+      "p95": 110.88,
+      "p99": 122.65,
+      "mean": 55.46,
+      "min": 19.08
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 162.42,
+      "p95": 452.66,
+      "p99": 487.54,
+      "mean": 193.13,
+      "min": 63.02
+     },
+     "host_cpu_us_per_decision": 69.2,
+     "kernel_cpu_us_per_kernel_decision": 153.71,
+     "kernel_peak_rss_kb": 8908,
+     "mismatches_vs_reference": 0
+    },
+    "C3_pipe_ref_native_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 97.92,
+      "p95": 436.19,
+      "p99": 585.58,
+      "mean": 137.58,
+      "min": 0.72
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 211.29,
+      "p95": 565.52,
+      "p99": 612.87,
+      "mean": 247.34,
+      "min": 73.9
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.13,
+      "p95": 110.03,
+      "p99": 121.62,
+      "mean": 54.91,
+      "min": 18.45
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 162.16,
+      "p95": 458.4,
+      "p99": 497.2,
+      "mean": 192.44,
+      "min": 55.45
+     },
+     "host_cpu_us_per_decision": 67.93,
+     "kernel_cpu_us_per_kernel_decision": 155.7,
+     "kernel_peak_rss_kb": 6824,
+     "mismatches_vs_reference": 0
+    },
+    "C5_pipe_par_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 97.97,
+      "p95": 439.01,
+      "p99": 574.82,
+      "mean": 137.31,
+      "min": 0.73
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 208.7,
+      "p95": 553.57,
+      "p99": 598.31,
+      "mean": 245.53,
+      "min": 85.62
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.31,
+      "p95": 110.33,
+      "p99": 124.25,
+      "mean": 55.46,
+      "min": 19.94
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 159.25,
+      "p95": 447.52,
+      "p99": 481.62,
+      "mean": 190.07,
+      "min": 62.73
+     },
+     "host_cpu_us_per_decision": 69.07,
+     "kernel_cpu_us_per_kernel_decision": 151.71,
+     "kernel_peak_rss_kb": 8856,
+     "mismatches_vs_reference": 0
+    },
+    "A_python": {
+     "all": {
+      "n": 22079,
+      "p50": 39.87,
+      "p95": 95.41,
+      "p99": 126.18,
+      "mean": 43.56,
+      "min": 1.67
+     },
+     "kernel_routed": {
+      "n": 10019,
+      "p50": 40.85,
+      "p95": 97.76,
+      "p99": 131.83,
+      "mean": 46.63,
+      "min": 6.41
+     },
+     "cpu_us_per_decision": 43.84
+    }
+   }
+  },
+  {
+   "order": [
+    "C1_pipe_ref_t1",
+    "C2_pipe_ref_default_threads",
+    "C3_pipe_ref_native_t1",
+    "C5_pipe_par_t1",
+    "A_python",
+    "B_adapter_ref_t1"
+   ],
+   "results": {
+    "C1_pipe_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 97.78,
+      "p95": 442.52,
+      "p99": 580.52,
+      "mean": 138.0,
+      "min": 0.75
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 210.73,
+      "p95": 558.17,
+      "p99": 604.56,
+      "mean": 248.16,
+      "min": 86.43
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.42,
+      "p95": 110.23,
+      "p99": 120.51,
+      "mean": 55.47,
+      "min": 17.87
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 161.38,
+      "p95": 452.1,
+      "p99": 492.46,
+      "mean": 192.69,
+      "min": 64.43
+     },
+     "host_cpu_us_per_decision": 68.68,
+     "kernel_cpu_us_per_kernel_decision": 152.71,
+     "kernel_peak_rss_kb": 8836,
+     "mismatches_vs_reference": 0
+    },
+    "C2_pipe_ref_default_threads": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 101.19,
+      "p95": 467.38,
+      "p99": 600.81,
+      "mean": 143.9,
+      "min": 0.64
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 214.56,
+      "p95": 568.4,
+      "p99": 649.72,
+      "mean": 256.11,
+      "min": 75.37
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.34,
+      "p95": 114.06,
+      "p99": 179.65,
+      "mean": 58.28,
+      "min": 18.27
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 165.0,
+      "p95": 458.56,
+      "p99": 512.83,
+      "mean": 197.83,
+      "min": 57.1
+     },
+     "host_cpu_us_per_decision": 73.64,
+     "kernel_cpu_us_per_kernel_decision": 156.7,
+     "kernel_peak_rss_kb": 5252,
+     "mismatches_vs_reference": 0
+    },
+    "C3_pipe_ref_native_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 98.73,
+      "p95": 444.63,
+      "p99": 593.29,
+      "mean": 139.88,
+      "min": 0.73
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 214.88,
+      "p95": 570.32,
+      "p99": 610.24,
+      "mean": 251.6,
+      "min": 70.76
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 48.17,
+      "p95": 110.71,
+      "p99": 121.47,
+      "mean": 55.13,
+      "min": 16.89
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 165.64,
+      "p95": 463.85,
+      "p99": 493.82,
+      "mean": 196.47,
+      "min": 53.87
+     },
+     "host_cpu_us_per_decision": 69.04,
+     "kernel_cpu_us_per_kernel_decision": 157.7,
+     "kernel_peak_rss_kb": 7184,
+     "mismatches_vs_reference": 0
+    },
+    "C5_pipe_par_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 102.27,
+      "p95": 471.56,
+      "p99": 610.83,
+      "mean": 146.04,
+      "min": 0.74
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 214.59,
+      "p95": 567.33,
+      "p99": 658.0,
+      "mean": 259.49,
+      "min": 84.49
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 50.46,
+      "p95": 116.05,
+      "p99": 193.41,
+      "mean": 60.71,
+      "min": 18.8
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 164.21,
+      "p95": 456.81,
+      "p99": 512.86,
+      "mean": 198.78,
+      "min": 65.7
+     },
+     "host_cpu_us_per_decision": 75.7,
+     "kernel_cpu_us_per_kernel_decision": 155.7,
+     "kernel_peak_rss_kb": 3104,
+     "mismatches_vs_reference": 0
+    },
+    "A_python": {
+     "all": {
+      "n": 22079,
+      "p50": 39.56,
+      "p95": 94.46,
+      "p99": 120.89,
+      "mean": 43.26,
+      "min": 1.72
+     },
+     "kernel_routed": {
+      "n": 10019,
+      "p50": 40.62,
+      "p95": 95.67,
+      "p99": 128.59,
+      "mean": 46.24,
+      "min": 6.17
+     },
+     "cpu_us_per_decision": 43.54
+    },
+    "B_adapter_ref_t1": {
+     "all_e2e": {
+      "n": 22079,
+      "p50": 101.39,
+      "p95": 465.12,
+      "p99": 608.14,
+      "mean": 148.03,
+      "min": 0.69
+     },
+     "kernel_routed_e2e": {
+      "n": 10019,
+      "p50": 232.55,
+      "p95": 588.37,
+      "p99": 626.0,
+      "mean": 268.06,
+      "min": 106.31
+     },
+     "kernel_routed_encode": {
+      "n": 10019,
+      "p50": 49.27,
+      "p95": 113.36,
+      "p99": 123.95,
+      "mean": 56.86,
+      "min": 18.4
+     },
+     "kernel_roundtrip": {
+      "n": 10019,
+      "p50": 181.24,
+      "p95": 478.87,
+      "p99": 510.77,
+      "mean": 211.2,
+      "min": 83.15
+     },
+     "host_cpu_us_per_decision": 102.97,
+     "kernel_cpu_us_per_kernel_decision": 153.71,
+     "kernel_peak_rss_kb": 3140,
+     "mismatches_vs_reference": 0
+    }
+   }
+  }
+ ],
+ "host_end": {
+  "loadavg": [
+   "1.97",
+   "1.97",
+   "2.06"
+  ],
+  "top_cpu_now": [
+   "57.6% Hyprland",
+   "4.8% pipewire",
+   "4.8% top",
+   "0.0% systemd",
+   "0.0% kthreadd"
+  ],
+  "time_utc": "2026-10-03T19:02:15Z"
+ },
+ "python_harness_maxrss_kb": 327600,
+ "phase": "single",
+ "smoke": false,
+ "corpus_sha256": "0e415e9ee987f96ef52b6e778e1c7aa689f7127581aefb04d4f55b387493fe0d",
+ "python": "3.14.7"
+}

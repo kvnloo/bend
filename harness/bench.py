@@ -182,29 +182,48 @@ def phase_single():
 
 
 # --------------------------------------------------------------------------- batch
+def _poll_hwm(pid, done, box):
+    # ru_maxrss from wait4 is inherited from the forking (Python) parent, so poll the child's own VmHWM
+    while not done.is_set():
+        try:
+            v = proc_hwm_kb(pid)
+            if v:
+                box[0] = max(box[0], v)
+        except OSError:
+            return
+        time.sleep(0.002)
+
+
 def run_batch_file(cmd, cwd=None, pipe_feed=False):
+    import threading
     blob = LINES_FILE.read_bytes() if pipe_feed else None
+    hwm_done, box = threading.Event(), [0]
     t0 = time.perf_counter()
     if pipe_feed:
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=cwd,
                              env=ENV)
-        import threading
         w = threading.Thread(target=lambda: (p.stdin.write(blob), p.stdin.close()))
+        poller = threading.Thread(target=_poll_hwm, args=(p.pid, hwm_done, box), daemon=True)
+        poller.start()
         w.start()
         data = p.stdout.read()
         w.join()
     else:
         with open(LINES_FILE, "rb") as f:
             p = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=cwd, env=ENV)
+            poller = threading.Thread(target=_poll_hwm, args=(p.pid, hwm_done, box), daemon=True)
+            poller.start()
             data = p.stdout.read()
     _, status, ru = os.wait4(p.pid, 0)
+    hwm_done.set()
+    poller.join()
     p.returncode = os.waitstatus_to_exitcode(status)
     wall = time.perf_counter() - t0
     got = data.splitlines()
     n = len(LINES)
     return {"rc": p.returncode, "wall_s": round(wall, 4), "wall_us_per_decision": round(wall * 1e6 / n, 2),
             "decisions_per_s": round(n / wall, 1), "cpu_us_per_decision": round((ru.ru_utime + ru.ru_stime) * 1e6 / n, 2),
-            "user_s": round(ru.ru_utime, 3), "sys_s": round(ru.ru_stime, 3), "peak_rss_kb": ru.ru_maxrss,
+            "user_s": round(ru.ru_utime, 3), "sys_s": round(ru.ru_stime, 3), "peak_rss_kb": box[0], "wait4_maxrss_kb_inherited": ru.ru_maxrss,
             "identical_to_reference": got == REF}
 
 
@@ -268,6 +287,8 @@ def phase_batch():
     out = {"host": host_info(), "n_kernel_lines": len(LINES), "repeats": []}
     reps = 1 if SMOKE else 3
     ctx = mp.get_context("fork")
+    gc.collect()
+    gc.freeze()  # keep forked workers from copy-on-write touching the whole corpus via GC
     with ctx.Pool(10) as pool:
         run_py_mp(pool, idx_k[:2000], 10)  # warm the workers
         for rep in range(reps):
@@ -275,7 +296,9 @@ def phase_batch():
             run_py_batch(idx_k[:500])
             res["A_python_batch_kernel_routed"] = run_py_batch(idx_k)
             res["A_python_batch_all"] = run_py_batch(idx_all)
-            res["A_mp10_batch_kernel_routed"] = run_py_mp(pool, idx_k, 10)
+            mps = [run_py_mp(pool, idx_k, 10) for _ in range(5)]
+            mps.sort(key=lambda x: x["wall_s"])
+            res["A_mp10_batch_kernel_routed"] = dict(mps[2], inner_runs_wall_s=[x["wall_s"] for x in mps])
             res["encode_batch_kernel_routed"] = run_encode_batch(idx_k)
             for name, (cmd, cwd, pf) in BATCH_BEND.items():
                 if SMOKE and name == "D_js_run_mode":
