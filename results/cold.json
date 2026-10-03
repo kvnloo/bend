@@ -1,0 +1,114 @@
+{
+ "host": {
+  "loadavg": [
+   "11.05",
+   "8.51",
+   "8.29"
+  ],
+  "top_cpu_now": [
+   "110.5% Discord",
+   "96.7% python3.10",
+   "96.7% python",
+   "96.7% python",
+   "78.3% ctx"
+  ],
+  "time_utc": "2026-10-03T21:00:14Z"
+ },
+ "doc": "fixture:compile-stop/mesh",
+ "A_python_cold": {
+  "import_us": {
+   "n": 10,
+   "p50": 5392.9,
+   "p95": 6144.13,
+   "p99": 6144.13,
+   "mean": 5161.72,
+   "min": 4524.45
+  },
+  "first_validate_us": {
+   "n": 10,
+   "p50": 83.6,
+   "p95": 166.79,
+   "p99": 166.79,
+   "mean": 95.29,
+   "min": 81.97
+  },
+  "second_validate_us": {
+   "n": 10,
+   "p50": 52.65,
+   "p95": 90.15,
+   "p99": 90.15,
+   "mean": 56.23,
+   "min": 51.03
+  },
+  "maxrss_kb": {
+   "n": 10,
+   "p50": 324884,
+   "p95": 324884,
+   "p99": 324884,
+   "mean": 324884.0,
+   "min": 324884
+  },
+  "process_total_us": {
+   "n": 10,
+   "p50": 32536.97,
+   "p95": 40454.26,
+   "p99": 40454.26,
+   "mean": 32725.99,
+   "min": 29169.49
+  }
+ },
+ "B_bend_cold_persistent": {
+  "spawn_plus_first_reply_us": {
+   "n": 10,
+   "p50": 661.81,
+   "p95": 2123.31,
+   "p99": 2123.31,
+   "mean": 935.28,
+   "min": 591.24
+  },
+  "second_reply_us": {
+   "n": 10,
+   "p50": 131.24,
+   "p95": 224.05,
+   "p99": 224.05,
+   "mean": 146.74,
+   "min": 126.48
+  },
+  "peak_rss_kb": {
+   "n": 10,
+   "p50": 2864,
+   "p95": 2892,
+   "p99": 2892,
+   "mean": 2865.2,
+   "min": 2840
+  }
+ },
+ "B_argv_process_per_decision_us": {
+  "n": 200,
+  "p50": 897.92,
+  "p95": 1497.5,
+  "p99": 1984.39,
+  "mean": 953.34,
+  "min": 567.91
+ },
+ "B_argv_mismatches": 0,
+ "host_end": {
+  "loadavg": [
+   "11.12",
+   "8.57",
+   "8.31"
+  ],
+  "top_cpu_now": [
+   "109.2% Discord",
+   "95.0% python3.10",
+   "95.0% python",
+   "85.5% ctx",
+   "80.7% Hyprland"
+  ],
+  "time_utc": "2026-10-03T21:00:14Z"
+ },
+ "phase": "cold",
+ "smoke": false,
+ "corpus_sha256": "0e415e9ee987f96ef52b6e778e1c7aa689f7127581aefb04d4f55b387493fe0d",
+ "python": "3.14.7"
+}

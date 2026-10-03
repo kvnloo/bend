@@ -61,9 +61,10 @@ if single:
             f"{f(med([g(r,name,'kernel_peak_rss_kb') for r in reps]))} |")
     out.append("")
 
-if batch:
+def batch_table(batch, title):
+    global out
     reps = batch["repeats"]
-    out += ["## Batched throughput (median of %d repeats)" % len(reps), "",
+    out += [f"## Batched throughput, {title} (median of %d repeats)" % len(reps), "",
             f"Host load at start: {batch['host']['loadavg']}; busiest: {batch['host'].get('top_cpu_now')}. "
             f"Bend rows: kernel only, {batch['n_kernel_lines']:,} pre-encoded request lines in one stdin; "
             "Python rows: validate() over the same 10,019 kernel-routed documents.", "",
@@ -77,7 +78,16 @@ if batch:
                    f"{f(med([x.get('peak_rss_kb') for x in rows]))} | {'ok' if par_ok else 'MISMATCH'} |")
     out += ["", f"Native process start (empty stdin): p50 {f(g(batch,'native_process_start_empty_stdin_us','p50'))} µs", ""]
 
+
+if batch:
+    batch_table(batch, "rerun")
+run1 = j("batch_run1_noisy")
+if run1:
+    batch_table(run1, "run 1")
+
+mem = (j("memory") or {}).get("python_validator_process") or [{"vmhwm_kb_bare_interpreter": None, "vmhwm_kb_after_import_and_validate": None}]
 if cold:
+    out += [f"Cold block host load at start: {cold['host']['loadavg']} (above the PREREG 3.0 noise threshold; not rerun, see README)", ""]
     a, b = cold["A_python_cold"], cold["B_bend_cold_persistent"]
     out += ["## Cold (fresh process, first decision; p50 of 10 µs)", "",
             "| path | p50 | p95 |", "| --- | --- | --- |",
@@ -85,7 +95,7 @@ if cold:
             f"| A: import aodl_contract | {f(a['import_us']['p50'])} | {f(a['import_us']['p95'])} |",
             f"| A: first validate() | {f(a['first_validate_us']['p50'],1)} | {f(a['first_validate_us']['p95'],1)} |",
             f"| A: second validate() | {f(a['second_validate_us']['p50'],1)} | {f(a['second_validate_us']['p95'],1)} |",
-            f"| A: python process maxrss KB | {f(a['maxrss_kb']['p50'])} | |",
+            f"| A: python validator process VmHWM KB (bare interpreter -> after import+validate; results/memory.json) | {f(mem[0]['vmhwm_kb_bare_interpreter'])} -> {f(mem[0]['vmhwm_kb_after_import_and_validate'])} | |",
             f"| B: spawn gate + first reply | {f(b['spawn_plus_first_reply_us']['p50'])} | {f(b['spawn_plus_first_reply_us']['p95'])} |",
             f"| B: second reply, same process | {f(b['second_reply_us']['p50'],1)} | {f(b['second_reply_us']['p95'],1)} |",
             f"| B: gate process peak RSS KB | {f(b['peak_rss_kb']['p50'])} | |",

@@ -1,0 +1,16 @@
+{
+ "python_validator_process": [
+  {
+   "vmhwm_kb_bare_interpreter": 12688,
+   "vmhwm_kb_after_import_and_validate": 17208
+  },
+  {
+   "vmhwm_kb_bare_interpreter": 12692,
+   "vmhwm_kb_after_import_and_validate": 17212
+  },
+  {
+   "vmhwm_kb_bare_interpreter": 12688,
+   "vmhwm_kb_after_import_and_validate": 17208
+  }
+ ]
+}

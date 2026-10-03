@@ -1,0 +1,160 @@
+{
+ "host": {
+  "loadavg": [
+   "11.14",
+   "10.63",
+   "9.22"
+  ],
+  "top_cpu_now": [
+   "104.0% Discord",
+   "99.2% python3.10",
+   "99.2% python",
+   "89.8% Hyprland",
+   "47.3% grep"
+  ],
+  "time_utc": "2026-10-03T21:03:02Z"
+ },
+ "bend_build_native": [
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend -o /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate0",
+   "rc": 0,
+   "wall_s": 5.628,
+   "tail": []
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend -o /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate1",
+   "rc": 0,
+   "wall_s": 3.977,
+   "tail": []
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend -o /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate2",
+   "rc": 0,
+   "wall_s": 4.181,
+   "tail": []
+  }
+ ],
+ "bend_emit_c": {
+  "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend -o /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate.c",
+  "rc": 0,
+  "wall_s": 0.865,
+  "tail": []
+ },
+ "clang_O3_only": {
+  "cmd": "clang -std=c11 -O3 /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate.c -lpthread -lm -o /mnt/zer0models/z0-wt/wiring/bend-perf/bin/onetime/gate_cc",
+  "rc": 0,
+  "wall_s": 3.073,
+  "tail": []
+ },
+ "check_only_main": [
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend --check-only",
+   "rc": 0,
+   "wall_s": 0.148,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend --check-only",
+   "rc": 0,
+   "wall_s": 0.151,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend main.bend --check-only",
+   "rc": 0,
+   "wall_s": 0.149,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  }
+ ],
+ "proof_check": [
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend",
+   "rc": 0,
+   "wall_s": 0.167,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend",
+   "rc": 0,
+   "wall_s": 0.17,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend",
+   "rc": 0,
+   "wall_s": 0.157,
+   "tail": [
+    "ALL PROOFS CHECK",
+    "Use --verdict for mathematical validity."
+   ]
+  }
+ ],
+ "proof_verdict_cold_kernel": {
+  "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend --verdict",
+  "rc": 0,
+  "wall_s": 27.774,
+  "tail": [
+   "ALL PROOFS CHECK"
+  ]
+ },
+ "proof_verdict_warm_kernel": [
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend --verdict",
+   "rc": 0,
+   "wall_s": 0.395,
+   "tail": [
+    "ALL PROOFS CHECK"
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend --verdict",
+   "rc": 0,
+   "wall_s": 0.444,
+   "tail": [
+    "ALL PROOFS CHECK"
+   ]
+  },
+  {
+   "cmd": "/mnt/zer0models/bend-stack/official/bend/bin/bend PROOF.bend --verdict",
+   "rc": 0,
+   "wall_s": 0.414,
+   "tail": [
+    "ALL PROOFS CHECK"
+   ]
+  }
+ ],
+ "host_end": {
+  "loadavg": [
+   "9.95",
+   "10.37",
+   "9.20"
+  ],
+  "top_cpu_now": [
+   "98.0% python",
+   "70.0% Discord",
+   "56.0% Hyprland",
+   "46.7% chromium",
+   "37.3% python3"
+  ],
+  "time_utc": "2026-10-03T21:03:50Z"
+ },
+ "phase": "onetime",
+ "smoke": false,
+ "corpus_sha256": "0e415e9ee987f96ef52b6e778e1c7aa689f7127581aefb04d4f55b387493fe0d",
+ "python": "3.14.7"
+}
