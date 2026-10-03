@@ -271,7 +271,7 @@ function item_ref(e: Safe, k: Name, cols: Cols, live: boolean): string {
 
 function item_emit(e: Safe, k: Name, cols: Cols, n: string): void {
   if (k[0] === "\t") {
-    return group_emit(e, group_of(e, k.slice(1)) as Group, cols, n);
+    return group_emit(e, group_new(e, k.slice(1)) as Group, cols, n);
   }
   const tld = e.book.tlds[k];
   if (tld === undefined) {
@@ -916,7 +916,7 @@ function args(e: Safe, s: Scope, k: Name | O, T: HTerm | null, xs: HTerm[], live
     U = F.B(v ?? x);
   });
   const g = typeof k === "string" ? group_of(e, k) : null;
-  if (g !== null) {
+  if (g !== null && g.ms.includes(k as Name)) {
     return group_call(e, s, g, k as Name, ps, U as HTerm, live);
   }
   const n = typeof k === "string" ? item_ref(e, k, ps.map((p) => p[3]), live) : null;
