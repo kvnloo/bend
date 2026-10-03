@@ -1,0 +1,70 @@
+diff --git a/bend/aodl_gate/README.md b/bend/aodl_gate/README.md
+index c875336..c5506f6 100644
+--- a/bend/aodl_gate/README.md
++++ b/bend/aodl_gate/README.md
+@@ -2,8 +2,9 @@
+ 
+ z0intelligence#48, kvnloo/aodl#19, z0intelligence#13. **Status: experimental.
+ Keep it that way.** Parity with the canonical validator is exact on everything
+-the kernel models. Eight laws are machine-checked. But it is 4–25x slower than
+-the in-process CPython validator, so it gives no hot-path benefit.
++the kernel models. Eight laws are machine-checked. But it is ~5.2–5.7x slower
++per decision than the in-process CPython validator (same host, quiet lane; see
++Latency), so it gives no hot-path benefit.
+ 
+ ```
+ AODL JSON ──► z0int.bend_gate (host, Python)            ──► Bend kernel (pure)     ──► ALLOW | DENY <codes>
+@@ -80,8 +81,25 @@ least 33 times. Spawn transitions: 16,356 compared (3,887 allow), 0
+ disagreements with the reference and 0 with `check_budget`. Another 3,644
+ unrepresentable proposals were denied.
+ 
+-**Latency** (Intel i7-4870HQ, 8 threads, CPU only, `--threads 1`, persistent pipe; the full pytest
+-suite ran concurrently for part of it, so absolute numbers are noisy):
++**Latency, re-measured 2026-10-03** (i9-10900KF, Bend 2.0.34 native `-o` build, clang -O3,
++persistent pipe, exclusive quiet-lane lock, pre-registered; 10,019 kernel-routed docs, median of 3;
++source: wiring/bend-perf results/TABLE.md, independently reproduced within 3%, and Bend 2.0.35 equal):
++
++| path | p50 | p95 | x CPython p50 |
++| --- | --- | --- | --- |
++| CPython `validate()` in-process | 40.9 µs | 95.8 µs | 1.00 |
++| host shape + encode alone | 49.5 µs | | 1.21 |
++| Bend gate end-to-end, adapter, `--threads 1` | 232.6 µs | 584.7 µs | 5.69 |
++| Bend gate end-to-end, plain pipe / default threads / `-march=native` | 211–212 µs | 559–567 µs | 5.16–5.20 |
++| of which kernel CPU per decision | ~154 µs | | 3.8 |
++| of which input scan only (scan-only control) | ~27 µs | | |
++| Bend process per decision (argv, no daemon) | 898 µs | 1,498 µs | ~22 |
++
++Over all 22,079 cases (55% rejected by the host shape check before Bend) the gap
++is 2.5x at p50 and 4.9x at p95. Batch throughput: serial kernel ~6k decisions/s;
++a fork-join variant reaches ~12k/s on 20 threads; one CPython core does ~20k/s.
++
++Earlier numbers (i7-4870HQ, pytest running concurrently, superseded):
+ 
+ | path | p50 | p95 |
+ | --- | --- | --- |
+@@ -92,17 +110,20 @@ suite ran concurrently for part of it, so absolute numbers are noisy):
+ | Python spawn reference in-process | 6.6 µs | 34 µs |
+ | Bend spawn round-trip | 150 µs | 834 µs |
+ 
+-Kernel peak RSS was 8.8 MB. Profiling showed that byte scanning plus parsing
+-alone takes 0.9–2.4 ms per fixture, which is more than the whole CPython
+-validator. Rebuilding the emitted C with `clang -O3 -march=native` gained
++Kernel peak RSS was 8.8 MB. A scan-only control (every byte scanned, no
++decision) costs ~27 µs of the ~150 µs kernel CPU, so ~82% is the closure-based
++parser plus list-based rule evaluation, not the byte scan. A binary/array wire
++format alone would not close the gap. Rebuilding the emitted C with `clang -O3 -march=native` gained
+ nothing.
+ 
+ ## Findings
+ 
+ 1. **No latency benefit is possible at this boundary.** The host must walk
+    the JSON to shape-check and intern it. That costs about as much as the
+-   canonical validator itself. The Bend runtime then spends ~1 µs per token on
+-   linked-list and closure-heavy code, and IPC adds a floor of ~70 µs. The
++   canonical validator itself. The Bend kernel then spends ~150 µs CPU per
++   decision, mostly in the closure-based parser and list-based rules; the pipe
++   itself adds only ~7 µs. This is not a configuration issue: thread count,
++   `-march=native`, batching and Bend 2.0.35 each move it by ≤10%. The
+    #48 promotion condition 2 ("material latency benefit") fails.
+ 2. **The runtime Nat is capped at 2^48−1 and aborts past it**, while the
+    proofs model an unbounded Nat. The fuzzer found it:

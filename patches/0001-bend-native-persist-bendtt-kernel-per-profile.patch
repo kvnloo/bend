@@ -1,0 +1,197 @@
+Proposed for /mnt/zer0models/z0-wt/ro/bend-native @ e85e65e (main). Not applied. Apply: git apply ../0001-bend-native-persist-bendtt-kernel-per-profile.patch
+
+--- a/session_kernel.py
++++ b/session_kernel.py
+@@ -2,16 +2,72 @@
+ from __future__ import annotations
+ 
+ from pathlib import Path
++import hashlib
++import json
++import os
++import shutil
+ import tempfile
+ import threading
+ 
+ from .verify_core import (
+-    BendVerifyError, clean_env, kernel_cache_identity, runtime_identity, verify,
++    BendVerifyError, clean_env, file_identity_sha256, kernel_cache_identity, runtime_identity, verify,
+ )
+ 
+ 
++def _cache_slot(cache_root, identity):
++    """One directory per exact Bend installation (bend, base.bend, bendtt.lean hashes)."""
++    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:32]
++    return Path(cache_root) / key
++
++
++def _load_cached_kernel(cache_root, identity):
++    """Return (path, sha256) of a previously bootstrapped kernel, or None.
++
++    The kernel is accepted only if its bytes still hash to the recorded value and
++    the slot is private to this user (owner-only, not group/world writable)."""
++    if cache_root is None:
++        return None
++    slot = _cache_slot(cache_root, identity)
++    kernel, recorded = slot / "bendtt", slot / "bendtt.sha256"
++    try:
++        st = slot.stat()
++        if st.st_uid != os.getuid() or st.st_mode & 0o077:
++            return None
++        expected = recorded.read_text().strip()
++    except OSError:
++        return None
++    actual = file_identity_sha256(str(kernel))
++    if actual is None or actual != expected:
++        return None
++    return str(kernel), actual
++
++
++def _store_kernel(cache_root, identity, source, sha256):
++    """Atomically publish a freshly bootstrapped kernel into the per-identity slot."""
++    if cache_root is None:
++        return
++    slot = _cache_slot(cache_root, identity)
++    try:
++        slot.mkdir(parents=True, exist_ok=True, mode=0o700)
++        os.chmod(slot, 0o700)
++        with tempfile.NamedTemporaryFile(dir=slot, delete=False) as tmp:
++            with open(source, "rb") as src:
++                shutil.copyfileobj(src, tmp)
++        if file_identity_sha256(tmp.name) != sha256:
++            os.unlink(tmp.name)
++            return
++        os.chmod(tmp.name, 0o500)
++        os.replace(tmp.name, slot / "bendtt")
++        (slot / "bendtt.sha256").write_text(sha256 + "\n")
++    except OSError:
++        return  # the cache is an optimisation; the session-private kernel still works
++
++
+ class KernelSession:
+-    def __init__(self):
++    def __init__(self, cache_root=None):
++        # cache_root: directory that keeps bootstrapped kernels across sessions
++        # (per Hermes profile). None keeps the old behaviour: rebuild every session.
++        self._cache_root = cache_root
+         self._lock = threading.RLock()
+         self._home = None
+         self._bend = None
+@@ -28,6 +84,11 @@
+             identity = runtime_identity(bend)
+             if self._identity is not None and (bend != self._bend or identity != self._identity):
+                 raise BendVerifyError("bend_integrity", "Bend installation changed; restart Hermes")
++            if self._kernel is None:
++                cached = _load_cached_kernel(self._cache_root, identity)
++                if cached is not None:
++                    self._bend, self._identity = bend, identity
++                    self._kernel, self._kernel_sha = cached
+             if self._kernel is not None:
+                 result = verify(project, proof, which=lambda _: bend,
+                                 kernel_override=self._kernel,
+@@ -52,6 +113,7 @@
+                     return result
+                 self._home, self._bend, self._identity = home, bend, identity
+                 self._kernel, self._kernel_sha = kernel["path"], kernel["sha256"]
++                _store_kernel(self._cache_root, identity, kernel["path"], kernel["sha256"])
+                 result["kernel_strategy"] = "session-bootstrap"
+                 return result
+             except BaseException:
+--- a/service.py
++++ b/service.py
+@@ -2,6 +2,7 @@
+ from __future__ import annotations
+ 
+ from pathlib import Path
++import os
+ import shutil
+ import threading
+ 
+@@ -70,7 +71,10 @@
+         bend = self.executable()
+         scope = str(get_hermes_home())
+         with self._lock:
+-            session = self._sessions.setdefault(scope, KernelSession())
++            session = self._sessions.get(scope)
++            if session is None:
++                cache = None if os.environ.get("HERMES_BEND_KERNEL_CACHE") == "0" else Path(scope) / "cache" / "bend-kernel"
++                session = self._sessions[scope] = KernelSession(cache_root=cache)
+         result = stamp(session.verify(bend, project, proof, dependency_cache=self.dependency_cache()))
+         self.save_receipt(result)
+         return result
+--- a/tests/test_session_kernel_cache.py
++++ b/tests/test_session_kernel_cache.py
+@@ -0,0 +1,73 @@
++"""A bootstrapped BendTT kernel is reused by later sessions of the same profile, hash-pinned."""
++import importlib
++import sys
++from pathlib import Path
++
++import pytest
++
++PLUGIN = Path(__file__).resolve().parents[1]
++
++
++@pytest.fixture
++def sk(monkeypatch, tmp_path):
++    # Import session_kernel without the Hermes plugin __init__ (pure unit test).
++    pkg = tmp_path / "bendpkg"
++    pkg.mkdir()
++    (pkg / "__init__.py").write_text("")
++    for name in ("session_kernel.py", "verify_core.py"):
++        (pkg / name).write_bytes((PLUGIN / name).read_bytes())
++    monkeypatch.syspath_prepend(str(tmp_path))
++    for mod in [m for m in sys.modules if m.startswith("bendpkg")]:
++        del sys.modules[mod]
++    mod = importlib.import_module("bendpkg.session_kernel")
++
++    calls = []
++    identity = {"bend": "b" * 64, "base.bend": "c" * 64, "bendtt.lean": "d" * 64}
++    monkeypatch.setattr(mod, "runtime_identity", lambda bend: identity)
++
++    def fake_verify(project, proof, *, kernel_override=None, source_env=None, **kw):
++        calls.append(kernel_override)
++        if kernel_override is None:  # bootstrap: Bend builds the kernel under $HOME
++            k = Path(source_env["HOME"]) / ".bend" / "bendtt" / "k" / "bendtt"
++            k.parent.mkdir(parents=True)
++            k.write_bytes(b"kernel-bytes")
++        return {"verdict": "pass", "success": True}
++
++    def fake_identity(bend, env):
++        k = Path(env["HOME"]) / ".bend" / "bendtt" / "k" / "bendtt"
++        return {"path": str(k), "sha256": mod.file_identity_sha256(str(k))}
++
++    monkeypatch.setattr(mod, "verify", fake_verify)
++    monkeypatch.setattr(mod, "kernel_cache_identity", fake_identity)
++    return mod, calls
++
++
++def test_second_session_reuses_cached_kernel(sk, tmp_path):
++    mod, calls = sk
++    cache = tmp_path / "profile" / "cache" / "bend-kernel"
++    first = mod.KernelSession(cache_root=cache)
++    assert first.verify("/bend", "/p", "PROOF.bend")["kernel_strategy"] == "session-bootstrap"
++    first.close()
++    second = mod.KernelSession(cache_root=cache)
++    assert second.verify("/bend", "/p", "PROOF.bend")["kernel_strategy"] == "session-pinned"
++    assert calls[0] is None and calls[1] is not None and calls[1].startswith(str(cache))
++
++
++def test_tampered_cache_is_ignored(sk, tmp_path):
++    mod, calls = sk
++    cache = tmp_path / "cache"
++    mod.KernelSession(cache_root=cache).verify("/bend", "/p", "PROOF.bend")
++    (kernel,) = cache.glob("*/bendtt")
++    kernel.chmod(0o700)
++    kernel.write_bytes(b"evil")
++    again = mod.KernelSession(cache_root=cache)
++    assert again.verify("/bend", "/p", "PROOF.bend")["kernel_strategy"] == "session-bootstrap"
++
++
++def test_no_cache_root_keeps_old_behaviour(sk):
++    mod, calls = sk
++    for _ in range(2):
++        s = mod.KernelSession()
++        assert s.verify("/bend", "/p", "PROOF.bend")["kernel_strategy"] == "session-bootstrap"
++        s.close()
++    assert calls == [None, None]
