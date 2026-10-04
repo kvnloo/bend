@@ -1,0 +1,5 @@
+{"label":"bend-evals-cpu-A","pid":912329,"acquired":"2026-10-04T01:37:51.883Z","released":"2026-10-04T01:38:57.788Z","rc":0,"cmd_sha256":"8679e374a26085ad"}
+{"label":"bend-evals-gpu-A","pid":915921,"acquired":"2026-10-04T01:38:57.792Z","released":"2026-10-04T01:39:21.324Z","rc":0,"cmd_sha256":"b25d90dc5687bcd5"}
+{"label":"bend-evals-cpu-B","pid":920504,"acquired":"2026-10-04T01:39:21.328Z","released":"2026-10-04T01:40:41.602Z","rc":0,"cmd_sha256":"0b4e82e0cdb2ed21"}
+{"label":"bend-evals-gpu-B","pid":1235816,"acquired":"2026-10-04T03:01:11.205Z","released":"2026-10-04T03:01:13.821Z","rc":0,"cmd_sha256":"b3cde1925b5d8be9"}
+{"label":"bend-evals-C","pid":1268994,"acquired":"2026-10-04T03:01:13.824Z","released":"2026-10-04T03:01:32.416Z","rc":0,"cmd_sha256":"6d480e262024e9b6"}
