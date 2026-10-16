@@ -3,6 +3,12 @@
 Each release names what changed for a user. `bend update` installs the
 latest one; the GitHub release carries the same notes.
 
+## Unreleased
+
+- **Foreign GPU calls are host effects**, not native bang backends.
+  `guide/EFFECTS.md` distinguishes explicit compute-library dispatch from
+  `--gpu` and documents the downstream Android/OpenCL experiment boundary.
+
 ## 2.0.37 (2026-10-13)
 
 - **A Nat crosses to a JS host as a plain number** (PR #1506 by

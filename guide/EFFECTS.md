@@ -95,6 +95,25 @@ runtime owns `w` and `f`. The effect owns `w->data`:
 allocate it in the run function and free it in `pack`. In `bend2/effs/`,
 `file_read.c` is the pattern for `io_work` and `tcp_recv.c` for `io_wait_on`.
 
+### External GPU APIs
+
+A C effect may call an external compute API from its `io_work` helper, then
+return the checked result on the loop. This is a host effect calling a foreign
+kernel, not a new backend for Bend's `!` evaluator: its native GPU lanes remain
+Metal and CUDA, as described in `WONTFIX.txt`.
+
+The `--gpu` flag controls Bend's bang evaluator, not arbitrary host libraries.
+In particular, `--gpu off` does not disable a GPU dispatch explicitly performed
+by a foreign effect. Such an effect must select and verify its own device,
+propagate API/build/enqueue/readback errors, and document any unsupported host
+or JS target rather than silently substituting CPU work.
+
+On Android, a vendor GPU library may require a native Android/Bionic executable;
+loading it from a glibc process is not equivalent. A downstream
+[Adreno OpenCL example](https://github.com/kvnloo/llama.bend/tree/exp/adreno-foreign-gemv-20261016/effects/adreno)
+keeps this experiment outside Base. A successful foreign dispatch does not prove
+native bang support, model-level acceleration or a speedup.
+
 ## The JS side
 
 The `.js` file is a plain script, run once in a closure of its own, that
